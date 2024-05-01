@@ -34,8 +34,10 @@ export class QueryRunner {
     const { FEE_QUERY, PAYMENT_QUERY, DUNE_API_KEY } = process.env;
     // TODO - make this configurable.
     const options = {
-      performance: QueryEngine.Medium,
-      opts: { pingFrequency: 10 },
+      // It is safer to run on medium in case the API key being used is not a PLUS account
+      performance: QueryEngine.Large,
+      // These queries take a long time to run.
+      opts: { pingFrequency: 30 },
     };
     return new QueryRunner(
       DUNE_API_KEY!,
