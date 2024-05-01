@@ -58,7 +58,7 @@ export class QueryRunner {
       console.log("Got Payment Due Results:", results);
       return results.map((row: any) => ({
         billingAddress: row.miner_biller_address!,
-        dueAmountWei: BigInt(row.due_payment_wei!),
+        dueAmountWei: BigInt(row.amount_due_wei!),
       }));
     } catch (error) {
       console.error("Error fetching payment data:", error);
