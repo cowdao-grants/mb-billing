@@ -1,12 +1,14 @@
 import {
   DuneClient,
-  ExecutionPerformance,
+  QueryEngine,
   Options,
+  QueryParameter,
 } from "@duneanalytics/client-sdk";
 import { AmountDue, BillingData } from "./types";
+import moment from "moment";
 
 interface RuntimeOptions {
-  performance?: ExecutionPerformance;
+  performance?: QueryEngine;
   opts?: Options;
 }
 
@@ -32,7 +34,9 @@ export class QueryRunner {
     const { FEE_QUERY, PAYMENT_QUERY, DUNE_API_KEY } = process.env;
     // TODO - make this configurable.
     const options = {
-      performance: ExecutionPerformance.Large,
+      // It is safer to run on medium in case the API key being used is not a PLUS account
+      performance: QueryEngine.Large,
+      // These queries take a long time to run.
       opts: { pingFrequency: 30 },
     };
     return new QueryRunner(
@@ -43,17 +47,18 @@ export class QueryRunner {
     );
   }
 
-  private async getAmountsDue(): Promise<AmountDue[]> {
+  private async getAmountsDue(date: string): Promise<AmountDue[]> {
     try {
       const paymentResponse = await this.dune.runQuery({
+        query_parameters: [QueryParameter.date("bill_date", date)],
         queryId: this.paymentQuery,
         ...this.options,
       });
       const results = paymentResponse.result!.rows;
-
+      console.log("Got Payment Due Results:", results);
       return results.map((row: any) => ({
         billingAddress: row.miner_biller_address!,
-        dueAmountWei: BigInt(row.due_payment_wei!),
+        dueAmountWei: BigInt(row.amount_due_wei!),
       }));
     } catch (error) {
       console.error("Error fetching payment data:", error);
@@ -61,9 +66,10 @@ export class QueryRunner {
     }
   }
 
-  private async getPeriodFee(): Promise<bigint> {
+  private async getPeriodFee(date: string): Promise<bigint> {
     try {
       const paymentResponse = await this.dune.runQuery({
+        query_parameters: [QueryParameter.date("bill_date", date)],
         queryId: this.feeQuery,
         ...this.options,
       });
@@ -71,6 +77,7 @@ export class QueryRunner {
       if (results.length > 1) {
         throw new Error(`Unexpected number of records ${results.length} != 1`);
       }
+      console.log("Period Fee Results:", results);
       const result = results[0].avg_block_fee_wei as string;
       return BigInt(result);
     } catch (error) {
@@ -79,12 +86,13 @@ export class QueryRunner {
     }
   }
 
-  async getBillingData(): Promise<BillingData> {
+  async getBillingData(date: Date): Promise<BillingData> {
     try {
+      const dateString = moment(date).format("YYYY-MM-DD HH:mm:ss");
       console.log(`Executing fee and payment queries this may take a while...`);
       const [dueAmounts, periodFee] = await Promise.all([
-        this.getAmountsDue(),
-        this.getPeriodFee(),
+        this.getAmountsDue(dateString),
+        this.getPeriodFee(dateString),
       ]);
       return { dueAmounts, periodFee };
     } catch (error) {

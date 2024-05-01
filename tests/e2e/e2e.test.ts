@@ -16,11 +16,12 @@ describe("e2e - Sepolia", () => {
     feeQuery,
     {},
   );
+  const billDate = new Date();
   // Requires RPC_URL, BILLER_PRIVATE_KEY
   const billingContract = BillingContract.fromEnv();
 
   it("Runs the full flow with mainnet data on Sepolia billing contract", async () => {
-    const billingData = await dataFetcher.getBillingData();
+    const billingData = await dataFetcher.getBillingData(billDate);
 
     const txHash = await billingContract.updatePaymentDetails(billingData);
     // Retrieve and validate event logs.
@@ -47,7 +48,7 @@ describe("e2e - Sepolia", () => {
   });
 
   it.skip("Dune: fetches billing data", async () => {
-    const result = await dataFetcher.getBillingData();
+    const result = await dataFetcher.getBillingData(billDate);
     expect(result).toEqual({
       dueAmounts: [
         {
