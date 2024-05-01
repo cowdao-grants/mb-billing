@@ -303,10 +303,10 @@
   resolved "https://registry.yarnpkg.com/@bcoe/v8-coverage/-/v8-coverage-0.2.3.tgz#75a2e8b51cb758a7553d6804a5932d7aace75c39"
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
-"@duneanalytics/client-sdk@^0.1.4":
-  version "0.1.4"
-  resolved "https://registry.yarnpkg.com/@duneanalytics/client-sdk/-/client-sdk-0.1.4.tgz#26ed141cffc450544a3d7f9075b484ebeb8db62a"
-  integrity sha512-vKCtG4TvESRTBgFBb1lxbGWa0jtHN23E26PYqbqeNHNejWOr7m6CNpwnjzKXnNPKPb42AfBmIuopC4/dd0kIYg==
+"@duneanalytics/client-sdk@^0.1.5":
+  version "0.1.5"
+  resolved "https://registry.yarnpkg.com/@duneanalytics/client-sdk/-/client-sdk-0.1.5.tgz#5b1d99ef76edab9fdd6f22c8e36ba2c1bc6e022b"
+  integrity sha512-IvBTp5mM2gIJocfmD+Ow2gtEAo5kXg/Gb0FcxnwbrYdCI7VA3NASIAGWs1QgBFw8C/yoVS+cQQlerCARkHVQ0w==
   dependencies:
     cross-fetch "^4.0.0"
     deprecated "^0.0.2"
@@ -1798,6 +1798,11 @@ minimatch@^3.0.4, minimatch@^3.1.1:
   integrity sha512-J7p63hRiAjw1NDEww1W7i37+ByIrOWO5XQQAzZ3VOcL0PNybwpfmV/N05zFAzwQ9USyEcX6t3UO+K5aqBQOIHw==
   dependencies:
     brace-expansion "^1.1.7"
+
+moment@^2.30.1:
+  version "2.30.1"
+  resolved "https://registry.yarnpkg.com/moment/-/moment-2.30.1.tgz#f8c91c07b7a786e30c59926df530b4eac96974ae"
+  integrity sha512-uEmtNhbDOrWPFS+hdjFCBfy9f2YoyzRpwcl+DqpC6taX21FzsTLQVbMV/W7PzNSX6x/bhC1zA3c2UQ5NzH6how==
 
 ms@2.1.2:
   version "2.1.2"
