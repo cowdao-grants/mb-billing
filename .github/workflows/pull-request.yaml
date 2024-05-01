@@ -1,0 +1,32 @@
+name: Node.js CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  types:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install & Build
+        run: yarn && yarn build
+
+      - name: Lint & Test
+        run: |
+          yarn lint
+          yarn test
+        env:
+          DUNE_API_KEY: ${{secrets.DUNE_API_KEY}}
+          BILLER_PRIVATE_KEY: ${{secrets.BILLER_PRIVATE_KEY}}
+
+          RPC_URL: https://rpc.sepolia.org
+          BILLING_CONTRACT_ADDRESS: "0x2ad5fcddf209ca9e01509ecfa77115d3a9f999fa"
