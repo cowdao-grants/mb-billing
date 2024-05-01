@@ -40,5 +40,5 @@ yarn run main
 
 ```sh
 docker build -t mb-billing .
-docker run mb-billing
+docker run --env-file .env mb-billing
 ```
