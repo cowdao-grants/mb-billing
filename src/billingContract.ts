@@ -48,9 +48,7 @@ export class BillingContract {
     return new BillingContract(BILLING_CONTRACT_ADDRESS!, signer);
   }
 
-  async updatePaymentDetails(
-    billingData: BillingData,
-  ): Promise<TransactionReceipt> {
+  async updatePaymentDetails(billingData: BillingData): Promise<string> {
     try {
       const { addresses, due, newPrice } = transformBillingData(billingData);
       const tx = await this.contract.bill(addresses, due, newPrice);

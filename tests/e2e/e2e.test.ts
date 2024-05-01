@@ -22,13 +22,12 @@ describe("e2e - Sepolia", () => {
   it("Runs the full flow with mainnet data on Sepolia billing contract", async () => {
     const billingData = await dataFetcher.getBillingData();
 
-    const { hash } = await billingContract.updatePaymentDetails(billingData);
-    // Retrieve and validate events.
+    const txHash = await billingContract.updatePaymentDetails(billingData);
+    // Retrieve and validate event logs.
     const provider = billingContract.contract.runner!.provider;
-    const receipt = await provider!.getTransactionReceipt(hash);
+    const receipt = await provider!.getTransactionReceipt(txHash);
     const logs = receipt?.logs;
-    console.log(logs);
-    expect(logs).toEqual([]);
+    expect(logs!.length).toEqual(1);
   });
 
   it.skip("e2e: successfully calls bill on BillingContract (with mock billing data)", async () => {
