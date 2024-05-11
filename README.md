@@ -6,7 +6,7 @@ The accounting processes are seeded through the [MEVBlockerFeeTill](https://gith
 The billing process is achieved through calling the `bill` method on this contract (restricted to `onlyBiller`).
 The data supplied to the billing method is aggregated by the following [Dune](https://dune.com) queries:
 
-1. [MEV Blocker - Fee per block](https://dune.com/queries/3634734)
+1. [MEV Blocker - Fee per block](https://dune.com/queries/3605385)
 2. [MEV Blocker - Payment Due](https://dune.com/queries/3630322)
 
 ## Verified Contracts
@@ -16,7 +16,7 @@ https://etherscan.io/address/0x08Cd77fEB3fB28CC1606A91E0Ea2f5e3EABa1A9a#writeCon
 ```
 
 ```
-https://sepolia.etherscan.io/address/0x2ad5fcddf209ca9e01509ecfa77115d3a9f999fa#writeContract
+https://sepolia.etherscan.io/address/0xF1436859a0F04A827b79F8c92736F6331ebB64A1#writeContract
 ```
 
 ## Local Development: Install, Set ENV & Run
