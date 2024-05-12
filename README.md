@@ -36,14 +36,14 @@ yarn run main
 ## Docker
 
 **Local build and run**
-```sh 
+
+```sh
 docker build -t mb-billing .
 docker run --rm --env-file .env mb-billing
 ```
 
 **Published image**
+
 ```sh
 docker run --rm --env-file .env ghcr.io/cowanator/mb-billing:main
 ```
-
-
