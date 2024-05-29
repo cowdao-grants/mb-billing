@@ -30,7 +30,10 @@ Some values are filled, but others require secrets (`DUNE_API_KEY` & `BILLER_PRI
 Run the Script:
 
 ```sh
-yarn run main
+# Billing:
+yarn main billing
+# Drafting
+yarn main drafting
 ```
 
 ## Docker

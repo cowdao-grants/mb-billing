@@ -8,12 +8,16 @@ dotenv.config();
 describe("e2e - Sepolia", () => {
   const { DUNE_API_KEY } = process.env;
   // This uses mock queries.
-  const paymentQuery = 3678623;
+  const billingQuery = 3678623;
   const feeQuery = 3678625;
+  const paymentQuery=3742749;
+  const bondMap ="('0xa489faf6e337d997b8a23e2b6f3a8880b1b61e19', '0xfd39bc23d356a762cf80f60b7bc8d2a4b9bcfe67')"
   const dataFetcher = new QueryRunner(
     DUNE_API_KEY!,
+    billingQuery,
     paymentQuery,
     feeQuery,
+    bondMap,
     {},
   );
   const billDate = new Date();
