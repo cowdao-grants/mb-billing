@@ -18,7 +18,8 @@
     "ethers": "^6.12.0",
     "loglevel": "^1.9.1",
     "moment": "^2.30.1",
-    "typescript": "^5.4.3"
+    "typescript": "^5.4.3",
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",

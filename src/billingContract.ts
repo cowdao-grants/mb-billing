@@ -1,4 +1,4 @@
-import { TransactionReceipt, ethers } from "ethers";
+import { ethers } from "ethers";
 import { BillingData } from "./types";
 
 const BILLING_CONTRACT_ABI = [
@@ -21,6 +21,47 @@ const BILLING_CONTRACT_ABI = [
       },
     ],
     name: "bill",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "id",
+        type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "amt",
+        type: "uint256",
+      },
+    ],
+    name: "draft",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "id",
+        type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "amt",
+        type: "uint256",
+      },
+      {
+        internalType: "address",
+        name: "to",
+        type: "address",
+      },
+    ],
+    name: "fine",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
@@ -57,6 +98,34 @@ export class BillingContract {
       return tx.hash;
     } catch (error) {
       console.error("Transaction failed:", error);
+      throw error;
+    }
+  }
+
+  async draft(account: `0x${string}`, amount: bigint): Promise<string> {
+    try {
+      const tx = await this.contract.draft(account, amount);
+      await tx.wait();
+      console.log("Draft Transaction successful:", tx);
+      return tx.hash;
+    } catch (error) {
+      console.error("Draft Transaction failed:", error);
+      throw error;
+    }
+  }
+
+  async fine(
+    account: `0x${string}`,
+    amount: bigint,
+    to: `0x${string}`,
+  ): Promise<string> {
+    try {
+      const tx = await this.contract.fine(account, amount, to);
+      await tx.wait();
+      console.log("Fine Transaction successful:", tx);
+      return tx.hash;
+    } catch (error) {
+      console.error("Fine Transaction failed:", error);
       throw error;
     }
   }

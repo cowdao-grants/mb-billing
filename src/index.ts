@@ -1,23 +1,27 @@
-import { QueryRunner } from "./dune";
-import { BillingContract } from "./billingContract";
+import dotenv from "dotenv";
 import log from "loglevel";
+import { AccountManager } from "./accountManager";
+import yargs from "yargs";
+import { hideBin } from "yargs/helpers";
 
-function todaysDate(): Date {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return today;
-}
-
-log.setLevel("debug");
+log.setLevel("info");
+dotenv.config();
 
 async function main() {
-  const today = todaysDate();
-  console.log("Running for Date", today);
-  const dataFetcher = QueryRunner.fromEnv();
-  const billingResults = await dataFetcher.getBillingData(today);
-  // TODO - validate results!
-  const billingContract = BillingContract.fromEnv();
-  await billingContract.updatePaymentDetails(billingResults);
+  const args = await yargs(hideBin(process.argv))
+    .command("billing", "Run billing process")
+    .command("drafting", "Run drafting process")
+    .demandCommand(1, "You need to specify a command: billing or drafting")
+    .help().argv;
+
+  const manager = AccountManager.fromEnv();
+  if (args._.includes("billing")) {
+    await manager.runBilling();
+  } else if (args._.includes("drafting")) {
+    await manager.runDrafting();
+  } else {
+    log.error("Invalid command. Use --help for usage information.");
+  }
 }
 
 main().then(() => console.log("All done!"));
