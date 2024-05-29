@@ -44,6 +44,7 @@ yarn main drafting
 docker build -t mb-billing .
 docker run --rm --env-file .env mb-billing $PROGRAM
 ```
+
 where `PROGRAM` is one of {billing, drafting}.
 
 **Published image**
