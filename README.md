@@ -42,11 +42,13 @@ yarn main drafting
 
 ```sh
 docker build -t mb-billing .
-docker run --rm --env-file .env mb-billing
+docker run --rm --env-file .env mb-billing $PROGRAM
 ```
+where `PROGRAM` is one of {billing, drafting}.
 
 **Published image**
 
 ```sh
-docker run --rm --env-file .env ghcr.io/cowanator/mb-billing:main
+export PROGRAM={billing, drafting}
+docker run --rm --env-file .env ghcr.io/cowanator/mb-billing:main $PROGRAM
 ```
