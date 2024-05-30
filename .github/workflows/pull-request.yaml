@@ -30,4 +30,4 @@ jobs:
           OWNER_PRIVATE_KEY: ${{secrets.OWNER_PRIVATE_KEY}}
 
           RPC_URL: https://rpc.sepolia.org
-          BILLING_CONTRACT_ADDRESS: "0x2ad5fcddf209ca9e01509ecfa77115d3a9f999fa"
+          BILLING_CONTRACT_ADDRESS: "0xF1436859a0F04A827b79F8c92736F6331ebB64A1"
