@@ -33,7 +33,7 @@ Run the Script:
 ```sh
 # Billing: Requires `BILLER_PRIVATE_KEY`
 yarn main billing
-# Drafting: Required `OWNER_PRIVATE_KEY`
+# Drafting: Requires `OWNER_PRIVATE_KEY`
 yarn main drafting
 ```
 
