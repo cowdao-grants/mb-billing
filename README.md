@@ -10,6 +10,7 @@ The data supplied to the billing method is aggregated by the following:
 
 - **Fee per block:** https://dune.com/queries/3605385
 - **Payment Due:** https://dune.com/queries/3630322
+- **Payment Status:** https://dune.com/queries/3742749
 
 ## Verified Contracts
 
@@ -25,14 +26,14 @@ yarn
 cp .env.sample .env
 ```
 
-Some values are filled, but others require secrets (`DUNE_API_KEY` & `BILLER_PRIVATE_KEY`).
+Some values are filled, but others require secrets (`DUNE_API_KEY`, `BILLER_PRIVATE_KEY` for billing and `OWNER_PRIVATE_KEY` for drafting).
 
 Run the Script:
 
 ```sh
-# Billing:
+# Billing: Requires `BILLER_PRIVATE_KEY`
 yarn main billing
-# Drafting
+# Drafting: Required `OWNER_PRIVATE_KEY`
 yarn main drafting
 ```
 
