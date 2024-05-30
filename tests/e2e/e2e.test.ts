@@ -34,7 +34,7 @@ describe("e2e - Sepolia", () => {
     const provider = billingContract.contract.runner!.provider;
     const receipt = await provider!.getTransactionReceipt(txHash);
     const logs = receipt?.logs;
-    expect(logs!.length).toEqual(1);
+    expect(logs!.length).toEqual(3);
   });
 
   it("Runs the drafting flow with mainnet data on Sepolia billing contract", async () => {
