@@ -37,7 +37,7 @@ describe("e2e - Sepolia", () => {
     expect(logs!.length).toEqual(1);
   });
 
-  it.only("Runs the drafting flow with mainnet data on Sepolia billing contract", async () => {
+  it("Runs the drafting flow with mainnet data on Sepolia billing contract", async () => {
     const paymentStatus = await dataFetcher.getPaymentStatus();
     const sudoBillingContract = BillingContract.fromEnv(true);
     const draftingHashes =
