@@ -1,7 +1,7 @@
 import { QueryRunner } from "./dune";
 import { BillingContract } from "./billingContract";
 import { PaymentStatus } from "./types";
-import { formatEther } from "ethers";
+import { ethers, formatEther } from "ethers";
 
 export class AccountManager {
   private dataFetcher: QueryRunner;
@@ -12,8 +12,15 @@ export class AccountManager {
     this.billingContract = billingContract;
   }
 
-  static fromEnv(): AccountManager {
+  static biller(): AccountManager {
     return new AccountManager(QueryRunner.fromEnv(), BillingContract.fromEnv());
+  }
+
+  static sudo(): AccountManager {
+    return new AccountManager(
+      QueryRunner.fromEnv(),
+      BillingContract.fromEnv(true),
+    );
   }
 
   async runBilling() {
@@ -27,19 +34,7 @@ export class AccountManager {
   async runDrafting() {
     console.log("Running Drafter");
     const paymentStatuses = await this.dataFetcher.getPaymentStatus();
-    paymentStatuses.map(async (record) => {
-      const { account, status, paidAmount, billedAmount } = record;
-      if (status == PaymentStatus.UNPAID) {
-        const owing = billedAmount - paidAmount;
-        console.info(`unpaid bill: ${account} owes ${formatEther(owing)} ETH`);
-        await this.billingContract.draft(account, owing);
-      } else if (status == PaymentStatus.OVERPAID) {
-        const over = paidAmount - billedAmount;
-        console.warn(
-          `overpaid bill: ${account} overpaid by ${formatEther(over)}`,
-        );
-      }
-    });
+    await this.billingContract.processPaymentStatuses(paymentStatuses);
   }
 }
 

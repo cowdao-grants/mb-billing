@@ -10,7 +10,8 @@ describe("e2e - Sepolia", () => {
   // This uses mock queries.
   const billingQuery = 3678623;
   const feeQuery = 3678625;
-  const paymentQuery = 3742749;
+  const paymentQuery = 3781897;
+
   const bondMap =
     "('0xa489faf6e337d997b8a23e2b6f3a8880b1b61e19', '0xfd39bc23d356a762cf80f60b7bc8d2a4b9bcfe67')";
   const dataFetcher = new QueryRunner(
@@ -25,7 +26,7 @@ describe("e2e - Sepolia", () => {
   // Requires RPC_URL, BILLER_PRIVATE_KEY
   const billingContract = BillingContract.fromEnv();
 
-  it("Runs the full flow with mainnet data on Sepolia billing contract", async () => {
+  it("Runs the billing flow with mainnet data on Sepolia billing contract", async () => {
     const billingData = await dataFetcher.getBillingData(billDate);
 
     const txHash = await billingContract.updatePaymentDetails(billingData);
@@ -34,6 +35,23 @@ describe("e2e - Sepolia", () => {
     const receipt = await provider!.getTransactionReceipt(txHash);
     const logs = receipt?.logs;
     expect(logs!.length).toEqual(1);
+  });
+
+  it.only("Runs the drafting flow with mainnet data on Sepolia billing contract", async () => {
+    const paymentStatus = await dataFetcher.getPaymentStatus();
+    const sudoBillingContract = BillingContract.fromEnv(true);
+    const draftingHashes =
+      await sudoBillingContract.processPaymentStatuses(paymentStatus);
+    // This is a non-deterministic test.
+    console.log("Drafting Hashes");
+    expect(draftingHashes.length).toEqual(2);
+
+    const provider = sudoBillingContract.contract.runner!.provider;
+    draftingHashes.map(async (hash) => {
+      const receipt = await provider!.getTransactionReceipt(hash);
+      const logs = receipt?.logs;
+      expect(logs!.length).toEqual(1);
+    });
   });
 
   it.skip("e2e: successfully calls bill on BillingContract (with mock billing data)", async () => {

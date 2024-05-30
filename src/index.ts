@@ -14,10 +14,12 @@ async function main() {
     .demandCommand(1, "You need to specify a command: billing or drafting")
     .help().argv;
 
-  const manager = AccountManager.fromEnv();
   if (args._.includes("billing")) {
+    const manager = AccountManager.biller();
     await manager.runBilling();
   } else if (args._.includes("drafting")) {
+    // Only Owner can call "draft"!
+    const manager = AccountManager.sudo();
     await manager.runDrafting();
   } else {
     log.error("Invalid command. Use --help for usage information.");
