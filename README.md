@@ -10,6 +10,7 @@ The data supplied to the billing method is aggregated by the following:
 
 - **Fee per block:** https://dune.com/queries/3605385
 - **Payment Due:** https://dune.com/queries/3630322
+- **Payment Status:** https://dune.com/queries/3742749
 
 ## Verified Contracts
 
@@ -25,12 +26,15 @@ yarn
 cp .env.sample .env
 ```
 
-Some values are filled, but others require secrets (`DUNE_API_KEY` & `BILLER_PRIVATE_KEY`).
+Some values are filled, but others require secrets (`DUNE_API_KEY`, `BILLER_PRIVATE_KEY` for billing and `OWNER_PRIVATE_KEY` for drafting).
 
 Run the Script:
 
 ```sh
-yarn run main
+# Billing: Requires `BILLER_PRIVATE_KEY`
+yarn main billing
+# Drafting: Requires `OWNER_PRIVATE_KEY`
+yarn main drafting
 ```
 
 ## Docker
@@ -39,11 +43,14 @@ yarn run main
 
 ```sh
 docker build -t mb-billing .
-docker run --rm --env-file .env mb-billing
+docker run --rm --env-file .env mb-billing $PROGRAM
 ```
+
+where `PROGRAM` is one of {billing, drafting}.
 
 **Published image**
 
 ```sh
-docker run --rm --env-file .env ghcr.io/cowanator/mb-billing:main
+export PROGRAM={billing, drafting}
+docker run --rm --env-file .env ghcr.io/cowanator/mb-billing:main $PROGRAM
 ```

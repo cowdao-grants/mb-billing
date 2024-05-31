@@ -15,4 +15,5 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
-CMD ["node", "dist/index.js"]
+# Set the entry point to allow passing command arguments dynamically
+ENTRYPOINT ["node", "dist/index.js"]

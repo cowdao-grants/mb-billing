@@ -1,5 +1,5 @@
-import { TransactionReceipt, ethers } from "ethers";
-import { BillingData } from "./types";
+import { ethers, formatEther } from "ethers";
+import { BillingData, LatestBillingStatus, PaymentStatus } from "./types";
 
 const BILLING_CONTRACT_ABI = [
   {
@@ -25,6 +25,47 @@ const BILLING_CONTRACT_ABI = [
     stateMutability: "nonpayable",
     type: "function",
   },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "id",
+        type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "amt",
+        type: "uint256",
+      },
+    ],
+    name: "draft",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "id",
+        type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "amt",
+        type: "uint256",
+      },
+      {
+        internalType: "address",
+        name: "to",
+        type: "address",
+      },
+    ],
+    name: "fine",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
 ];
 
 interface BillingInput {
@@ -40,11 +81,20 @@ export class BillingContract {
     this.contract = new ethers.Contract(address, BILLING_CONTRACT_ABI, signer);
   }
 
-  static fromEnv(): BillingContract {
-    const { RPC_URL, BILLER_PRIVATE_KEY, BILLING_CONTRACT_ADDRESS } =
-      process.env;
+  static fromEnv(sudo: boolean = false): BillingContract {
+    const {
+      RPC_URL,
+      BILLER_PRIVATE_KEY,
+      OWNER_PRIVATE_KEY,
+      BILLING_CONTRACT_ADDRESS,
+    } = process.env;
     const provider = new ethers.JsonRpcProvider(RPC_URL!);
-    const signer = new ethers.Wallet(BILLER_PRIVATE_KEY!, provider);
+    let signer: ethers.Wallet;
+    if (sudo) {
+      signer = new ethers.Wallet(OWNER_PRIVATE_KEY!, provider);
+    } else {
+      signer = new ethers.Wallet(BILLER_PRIVATE_KEY!, provider);
+    }
     return new BillingContract(BILLING_CONTRACT_ADDRESS!, signer);
   }
 
@@ -57,6 +107,66 @@ export class BillingContract {
       return tx.hash;
     } catch (error) {
       console.error("Transaction failed:", error);
+      throw error;
+    }
+  }
+
+  async processPaymentStatuses(
+    paymentStatuses: LatestBillingStatus[],
+  ): Promise<string[]> {
+    const unpaidRecords = paymentStatuses.filter((record) => {
+      const { account, status, paidAmount, billedAmount } = record;
+      if (status == PaymentStatus.UNPAID) {
+        const owing = billedAmount - paidAmount;
+        console.info(`unpaid bill: ${account} owes ${formatEther(owing)} ETH`);
+        return true;
+      } else if (status == PaymentStatus.OVERPAID) {
+        const over = paidAmount - billedAmount;
+        console.warn(
+          `overpaid bill: ${account} overpaid by ${formatEther(over)}`,
+        );
+        return false;
+      }
+      return false;
+    });
+    // These drafts must be processed sequentially
+    // Otherwise the owner account nonce will not be incremented.
+    const resultHashes = [];
+    for (const rec of unpaidRecords) {
+      console.log(`Executing draft for ${rec.account}...`);
+      const txHash = await this.draft(
+        rec.account,
+        rec.billedAmount - rec.paidAmount,
+      );
+      resultHashes.push(txHash);
+    }
+    return resultHashes;
+  }
+
+  async draft(account: `0x${string}`, amount: bigint): Promise<string> {
+    try {
+      const tx = await this.contract.draft(account, amount);
+      await tx.wait();
+      console.log("Draft successful:", tx.hash);
+      return tx.hash;
+    } catch (error) {
+      console.error("Draft Transaction failed:", error);
+      throw error;
+    }
+  }
+
+  async fine(
+    account: `0x${string}`,
+    amount: bigint,
+    to: `0x${string}`,
+  ): Promise<string> {
+    try {
+      const tx = await this.contract.fine(account, amount, to);
+      await tx.wait();
+      console.log("Fine Transaction successful:", tx);
+      return tx.hash;
+    } catch (error) {
+      console.error("Fine Transaction failed:", error);
       throw error;
     }
   }
