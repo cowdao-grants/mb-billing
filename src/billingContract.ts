@@ -68,6 +68,53 @@ const BILLING_CONTRACT_ABI = [
   },
 ];
 
+const ROLE_MODIFIER_ABI = [
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "to",
+        type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "value",
+        type: "uint256",
+      },
+      {
+        internalType: "bytes",
+        name: "data",
+        type: "bytes",
+      },
+      {
+        internalType: "enum Enum.Operation",
+        name: "operation",
+        type: "uint8",
+      },
+      {
+        internalType: "bytes32",
+        name: "roleKey",
+        type: "bytes32",
+      },
+      {
+        internalType: "bool",
+        name: "shouldRevert",
+        type: "bool",
+      },
+    ],
+    name: "execTransactionWithRole",
+    outputs: [
+      {
+        internalType: "bool",
+        name: "success",
+        type: "bool",
+      },
+    ],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+];
+
 interface BillingInput {
   addresses: `0x${string}`[];
   due: bigint[];
@@ -76,26 +123,25 @@ interface BillingInput {
 
 export class BillingContract {
   readonly contract: ethers.Contract;
+  readonly roleContract: ethers.Contract;
+  private roleKey: string;
 
-  constructor(address: string, signer: ethers.Wallet) {
+  constructor(address: string, signer: ethers.Wallet, roleKey: string) {
     this.contract = new ethers.Contract(address, BILLING_CONTRACT_ABI, signer);
+    this.roleContract = new ethers.Contract(
+      "0xa2f93c12E697ABC34770CFAB2def5532043E26e9",
+      ROLE_MODIFIER_ABI,
+      signer,
+    );
+    this.roleKey = roleKey;
   }
 
-  static fromEnv(sudo: boolean = false): BillingContract {
-    const {
-      RPC_URL,
-      BILLER_PRIVATE_KEY,
-      OWNER_PRIVATE_KEY,
-      BILLING_CONTRACT_ADDRESS,
-    } = process.env;
+  static fromEnv(): BillingContract {
+    const { RPC_URL, BILLER_PRIVATE_KEY, BILLING_CONTRACT_ADDRESS, ROLE_KEY } =
+      process.env;
     const provider = new ethers.JsonRpcProvider(RPC_URL!);
-    let signer: ethers.Wallet;
-    if (sudo) {
-      signer = new ethers.Wallet(OWNER_PRIVATE_KEY!, provider);
-    } else {
-      signer = new ethers.Wallet(BILLER_PRIVATE_KEY!, provider);
-    }
-    return new BillingContract(BILLING_CONTRACT_ADDRESS!, signer);
+    const signer = new ethers.Wallet(BILLER_PRIVATE_KEY!, provider);
+    return new BillingContract(BILLING_CONTRACT_ADDRESS!, signer, ROLE_KEY!);
   }
 
   async updatePaymentDetails(billingData: BillingData): Promise<string> {
@@ -134,7 +180,7 @@ export class BillingContract {
     const resultHashes = [];
     for (const rec of unpaidRecords) {
       console.log(`Executing draft for ${rec.account}...`);
-      const txHash = await this.draft(
+      const txHash = await this.draftWithRole(
         rec.account,
         rec.billedAmount - rec.paidAmount,
       );
@@ -147,6 +193,31 @@ export class BillingContract {
     try {
       const tx = await this.contract.draft(account, amount);
       await tx.wait();
+      console.log("Draft successful:", tx.hash);
+      return tx.hash;
+    } catch (error) {
+      console.error("Draft Transaction failed:", error);
+      throw error;
+    }
+  }
+
+  async draftWithRole(account: `0x${string}`, amount: bigint): Promise<string> {
+    try {
+      const functionCallData = this.contract.interface.encodeFunctionData(
+        "draft",
+        [account, amount],
+      );
+      const tx = await this.roleContract.execTransactionWithRole(
+        this.contract.getAddress(), // to
+        0, // value
+        functionCallData, // data
+        0, // operation
+        this.roleKey, // roleKey
+        true, // shouldRevert
+      );
+      console.log("DID IS SEND?", tx);
+      await tx.wait();
+      console.log("DID IS SEND?", JSON.stringify(tx));
       console.log("Draft successful:", tx.hash);
       return tx.hash;
     } catch (error) {

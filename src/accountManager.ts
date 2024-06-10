@@ -12,15 +12,8 @@ export class AccountManager {
     this.billingContract = billingContract;
   }
 
-  static biller(): AccountManager {
+  static fromEnv(): AccountManager {
     return new AccountManager(QueryRunner.fromEnv(), BillingContract.fromEnv());
-  }
-
-  static sudo(): AccountManager {
-    return new AccountManager(
-      QueryRunner.fromEnv(),
-      BillingContract.fromEnv(true),
-    );
   }
 
   async runBilling() {
