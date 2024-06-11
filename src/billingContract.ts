@@ -11,9 +11,9 @@ interface BillingInput {
 export class BillingContract {
   readonly contract: ethers.Contract;
   readonly roleContract: ethers.Contract;
-  private roleKey: string;
+  private roleKey?: string;
 
-  constructor(address: string, signer: ethers.Wallet, roleKey: string) {
+  constructor(address: string, signer: ethers.Wallet, roleKey?: string) {
     this.contract = new ethers.Contract(address, BILLING_CONTRACT_ABI, signer);
     this.roleContract = new ethers.Contract(
       "0xa2f93c12E697ABC34770CFAB2def5532043E26e9",
@@ -21,6 +21,11 @@ export class BillingContract {
       signer,
     );
     this.roleKey = roleKey;
+    if (!roleKey) {
+      console.warn(
+        `No ROLE_KEY provided, executing transactions as ${signer.address}`,
+      );
+    }
   }
 
   static fromEnv(): BillingContract {
@@ -28,7 +33,7 @@ export class BillingContract {
       process.env;
     const provider = new ethers.JsonRpcProvider(RPC_URL!);
     const signer = new ethers.Wallet(BILLER_PRIVATE_KEY!, provider);
-    return new BillingContract(BILLING_CONTRACT_ADDRESS!, signer, ROLE_KEY!);
+    return new BillingContract(BILLING_CONTRACT_ADDRESS!, signer, ROLE_KEY);
   }
 
   async updatePaymentDetails(billingData: BillingData): Promise<string> {
@@ -67,7 +72,7 @@ export class BillingContract {
     const resultHashes = [];
     for (const rec of unpaidRecords) {
       console.log(`Executing draft for ${rec.account}...`);
-      const txHash = await this.draftWithRole(
+      const txHash = await this.draft(
         rec.account,
         rec.billedAmount - rec.paidAmount,
       );
@@ -78,33 +83,19 @@ export class BillingContract {
 
   async draft(account: `0x${string}`, amount: bigint): Promise<string> {
     try {
-      const tx = await this.contract.draft(account, amount);
-      await tx.wait();
-      console.log("Draft successful:", tx.hash);
-      return tx.hash;
-    } catch (error) {
-      console.error("Draft Transaction failed:", error);
-      throw error;
-    }
-  }
-
-  async draftWithRole(account: `0x${string}`, amount: bigint): Promise<string> {
-    try {
-      const functionCallData = this.contract.interface.encodeFunctionData(
-        "draft",
-        [account, amount],
-      );
-      const tx: ethers.ContractTransactionResponse =
-        await this.roleContract.execTransactionWithRole(
-          this.contract.getAddress(), // to
-          0, // value
-          functionCallData, // data
-          0, // operation
-          this.roleKey, // roleKey
-          true, // shouldRevert
+      let tx: ethers.ContractTransactionResponse;
+      if (this.roleKey) {
+        tx = await this.execWithRole(
+          this.contract.interface.encodeFunctionData("draft", [
+            account,
+            amount,
+          ]),
+          this.roleKey,
         );
+      } else {
+        tx = await this.contract.fine(account, amount);
+      }
       await tx.wait();
-      console.log("Draft successful:", tx.hash);
       return tx.hash;
     } catch (error) {
       console.error("Draft Transaction failed:", error);
@@ -118,14 +109,39 @@ export class BillingContract {
     to: `0x${string}`,
   ): Promise<string> {
     try {
-      const tx = await this.contract.fine(account, amount, to);
+      let tx: ethers.ContractTransactionResponse;
+      if (this.roleKey) {
+        tx = await this.execWithRole(
+          this.contract.interface.encodeFunctionData("fine", [
+            account,
+            amount,
+            to,
+          ]),
+          this.roleKey,
+        );
+      } else {
+        tx = await this.contract.fine(account, amount, to);
+      }
       await tx.wait();
-      console.log("Fine Transaction successful:", tx);
       return tx.hash;
     } catch (error) {
       console.error("Fine Transaction failed:", error);
       throw error;
     }
+  }
+
+  async execWithRole(
+    data: string,
+    roleKey: string,
+  ): Promise<ethers.ContractTransactionResponse> {
+    return this.roleContract.execTransactionWithRole(
+      this.contract.getAddress(), // to
+      0, // value
+      data,
+      0, // operation
+      roleKey,
+      true, // shouldRevert
+    );
   }
 }
 
