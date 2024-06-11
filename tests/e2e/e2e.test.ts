@@ -28,6 +28,7 @@ describe("e2e - Sepolia", () => {
 
   it("Runs the billing flow with mainnet data on Sepolia billing contract", async () => {
     const billingData = await dataFetcher.getBillingData(billDate);
+
     const txHash = await billingContract.updatePaymentDetails(billingData);
     // Retrieve and validate event logs.
     const provider = billingContract.contract.runner!.provider;
