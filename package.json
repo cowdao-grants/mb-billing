@@ -8,7 +8,7 @@
     "main": "npx ts-node src/index.ts",
     "fmt": "npx prettier --write .",
     "lint": "npx prettier --check .",
-    "test": "jest --testTimeout 60000"
+    "test": "jest --testTimeout 75000"
   },
   "author": "CoW Anator (@cowanator)",
   "license": "MIT",

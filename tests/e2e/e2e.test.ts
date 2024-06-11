@@ -39,14 +39,14 @@ describe("e2e - Sepolia", () => {
 
   it("Runs the drafting flow with mainnet data on Sepolia billing contract", async () => {
     const paymentStatus = await dataFetcher.getPaymentStatus();
-    const sudoBillingContract = BillingContract.fromEnv(true);
+    const billingContract = BillingContract.fromEnv();
     const draftingHashes =
-      await sudoBillingContract.processPaymentStatuses(paymentStatus);
+      await billingContract.processPaymentStatuses(paymentStatus);
     // This is a non-deterministic test.
     console.log("Drafting Hashes");
     expect(draftingHashes.length).toEqual(2);
 
-    const provider = sudoBillingContract.contract.runner!.provider;
+    const provider = billingContract.contract.runner!.provider;
     draftingHashes.map(async (hash) => {
       const receipt = await provider!.getTransactionReceipt(hash);
       const logs = receipt?.logs;
