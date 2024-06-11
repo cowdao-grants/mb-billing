@@ -28,9 +28,7 @@ describe("e2e - Sepolia", () => {
 
   it("Runs the billing flow with mainnet data on Sepolia billing contract", async () => {
     const billingData = await dataFetcher.getBillingData(billDate);
-    console.log("Retrieved Billing Data");
     const txHash = await billingContract.updatePaymentDetails(billingData);
-    console.log("Updated Payment Details");
     // Retrieve and validate event logs.
     const provider = billingContract.contract.runner!.provider;
     const receipt = await provider!.getTransactionReceipt(txHash);
@@ -38,7 +36,7 @@ describe("e2e - Sepolia", () => {
     expect(logs!.length).toEqual(3);
   });
 
-  it.skip("Runs the drafting flow with mainnet data on Sepolia billing contract", async () => {
+  it("Runs the drafting flow with mainnet data on Sepolia billing contract", async () => {
     const paymentStatus = await dataFetcher.getPaymentStatus();
     const billingContract = BillingContract.fromEnv();
     const draftingHashes =
