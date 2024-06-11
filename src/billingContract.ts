@@ -207,17 +207,16 @@ export class BillingContract {
         "draft",
         [account, amount],
       );
-      const tx = await this.roleContract.execTransactionWithRole(
-        this.contract.getAddress(), // to
-        0, // value
-        functionCallData, // data
-        0, // operation
-        this.roleKey, // roleKey
-        true, // shouldRevert
-      );
-      console.log("DID IS SEND?", tx);
+      const tx: ethers.ContractTransactionResponse =
+        await this.roleContract.execTransactionWithRole(
+          this.contract.getAddress(), // to
+          0, // value
+          functionCallData, // data
+          0, // operation
+          this.roleKey, // roleKey
+          true, // shouldRevert
+        );
       await tx.wait();
-      console.log("DID IS SEND?", JSON.stringify(tx));
       console.log("Draft successful:", tx.hash);
       return tx.hash;
     } catch (error) {
