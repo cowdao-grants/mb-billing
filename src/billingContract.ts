@@ -12,8 +12,14 @@ export class BillingContract {
   readonly contract: ethers.Contract;
   readonly roleContract: ethers.Contract;
   private roleKey?: string;
+  fineAmount: bigint;
 
-  constructor(address: string, signer: ethers.Wallet, roleKey?: string) {
+  constructor(
+    address: string,
+    signer: ethers.Wallet,
+    fineAmount: bigint,
+    roleKey?: string,
+  ) {
     this.contract = new ethers.Contract(address, BILLING_CONTRACT_ABI, signer);
     this.roleContract = new ethers.Contract(
       "0xa2f93c12E697ABC34770CFAB2def5532043E26e9",
@@ -26,14 +32,26 @@ export class BillingContract {
         `No ROLE_KEY provided, executing transactions as ${signer.address}`,
       );
     }
+    this.fineAmount = fineAmount;
   }
 
   static fromEnv(): BillingContract {
-    const { RPC_URL, BILLER_PRIVATE_KEY, BILLING_CONTRACT_ADDRESS, ROLE_KEY } =
-      process.env;
+    const {
+      RPC_URL,
+      BILLER_PRIVATE_KEY,
+      BILLING_CONTRACT_ADDRESS,
+      ROLE_KEY,
+      FINE_FEE,
+    } = process.env;
     const provider = new ethers.JsonRpcProvider(RPC_URL!);
     const signer = new ethers.Wallet(BILLER_PRIVATE_KEY!, provider);
-    return new BillingContract(BILLING_CONTRACT_ADDRESS!, signer, ROLE_KEY);
+    const fineAmount = FINE_FEE ? BigInt(FINE_FEE) : 0n;
+    return new BillingContract(
+      BILLING_CONTRACT_ADDRESS!,
+      signer,
+      fineAmount,
+      ROLE_KEY,
+    );
   }
 
   async updatePaymentDetails(billingData: BillingData): Promise<string> {
@@ -72,11 +90,16 @@ export class BillingContract {
     const resultHashes = [];
     for (const rec of unpaidRecords) {
       console.log(`Executing draft for ${rec.account}...`);
-      const txHash = await this.draft(
+      const draftHash = await this.draft(
         rec.account,
         rec.billedAmount - rec.paidAmount,
       );
-      resultHashes.push(txHash);
+      resultHashes.push(draftHash);
+      if (this.fineAmount > 0) {
+        console.log(`Executing fine for ${rec.account}...`);
+        const fineHash = await this.fine(rec.account, this.fineAmount);
+        resultHashes.push(fineHash);
+      }
     }
     return resultHashes;
   }
@@ -103,24 +126,22 @@ export class BillingContract {
     }
   }
 
-  async fine(
-    account: `0x${string}`,
-    amount: bigint,
-    to: `0x${string}`,
-  ): Promise<string> {
+  async fine(account: `0x${string}`, amount: bigint): Promise<string> {
     try {
       let tx: ethers.ContractTransactionResponse;
+      // Fee Recipient is MEVBlockerFeeTill Contract.
+      const feeRecipient = await this.contract.getAddress();
       if (this.roleKey) {
         tx = await this.execWithRole(
           this.contract.interface.encodeFunctionData("fine", [
             account,
             amount,
-            to,
+            feeRecipient,
           ]),
           this.roleKey,
         );
       } else {
-        tx = await this.contract.fine(account, amount, to);
+        tx = await this.contract.fine(account, amount, feeRecipient);
       }
       await tx.wait();
       return tx.hash;
