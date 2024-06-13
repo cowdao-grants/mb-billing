@@ -1,7 +1,5 @@
 import { QueryRunner } from "./dune";
 import { BillingContract } from "./billingContract";
-import { PaymentStatus } from "./types";
-import { ethers, formatEther } from "ethers";
 
 export class AccountManager {
   private dataFetcher: QueryRunner;
