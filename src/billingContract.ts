@@ -93,7 +93,7 @@ export class BillingContract {
           this.roleKey,
         );
       } else {
-        tx = await this.contract.fine(account, amount);
+        tx = await this.contract.draft(account, amount);
       }
       await tx.wait();
       return tx.hash;
