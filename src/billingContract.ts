@@ -1,11 +1,7 @@
 import { ethers, formatEther } from "ethers";
 import { BillingData, LatestBillingStatus, PaymentStatus } from "./types";
-import {
-  BILLING_CONTRACT_ABI,
-  MULTI_SEND_ABI,
-  ROLE_MODIFIER_ABI,
-} from "./abis";
-import { MULTISEND_141, MetaTransaction, encodeMetaTransaction, encodeMulti } from "./multisend";
+import { BILLING_CONTRACT_ABI, ROLE_MODIFIER_ABI } from "./abis";
+import { MetaTransaction, encodeMulti } from "./multisend";
 
 interface BillingInput {
   addresses: `0x${string}`[];
