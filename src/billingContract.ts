@@ -140,10 +140,15 @@ export class BillingContract {
       let tx: ethers.ContractTransactionResponse;
       if (this.roleKey) {
         tx = await this.execWithRole(
-         [ this.contract.interface.encodeFunctionData("draft", [
-            account,
-            amount,
-          ])],
+         [{
+            to:await this.contract.getAddress(),
+            data: this.contract.interface.encodeFunctionData("draft", [
+              account,
+              amount,
+            ]),
+            value: 0,
+            operation: 0,
+          }],
           this.roleKey,
         );
       } else {
@@ -164,11 +169,16 @@ export class BillingContract {
       const feeRecipient = await this.contract.getAddress();
       if (this.roleKey) {
         tx = await this.execWithRole(
-          [this.contract.interface.encodeFunctionData("fine", [
-            account,
-            amount,
-            feeRecipient,
-          ])],
+          [{
+            to:  await this.contract.getAddress(),
+            data: this.contract.interface.encodeFunctionData("fine", [
+              account,
+              amount,
+              feeRecipient,
+            ]),
+            value: 0,
+            operation: 0,
+          }],
           this.roleKey,
         );
       } else {
