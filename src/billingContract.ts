@@ -12,7 +12,6 @@ interface BillingInput {
 export class BillingContract {
   readonly contract: ethers.Contract;
   readonly roleContract: ethers.Contract;
-  private signer: ethers.Signer;
   private roleKey?: string;
   fineAmount: bigint;
 
@@ -28,7 +27,6 @@ export class BillingContract {
       ROLE_MODIFIER_ABI,
       signer,
     );
-    this.signer = signer;
     this.roleKey = roleKey;
     if (!roleKey) {
       console.warn(
@@ -103,6 +101,8 @@ export class BillingContract {
       // );
       // resultHashes.push(draftHash);
       // if (this.fineAmount > 0) {
+      //   // Fee Recipient is MEVBlockerFeeTill Contract.
+      //   const feeRecipient = await this.contract.getAddress();
       //   console.log(`Executing fine for ${rec.account}...`);
       //   const fineHash = await this.fine(rec.account, this.fineAmount);
       //   resultHashes.push(fineHash);
@@ -110,13 +110,6 @@ export class BillingContract {
     }
 
     const tx = await this.execWithRole(txBatch, this.roleKey!);
-    // const multisend = new ethers.Contract(
-    //   batch.to,
-    //   MULTI_SEND_ABI,
-    //   this.signer,
-    // );
-    // const tx = await multisend.multiSend(batch.data);
-    // console.log(JSON.parse(tx));
     await tx.wait();
     return tx.hash;
   }
@@ -127,28 +120,21 @@ export class BillingContract {
   ): Promise<MetaTransaction> {
     return {
       to: await this.contract.getAddress(),
-      value: 0,
       data: this.contract.interface.encodeFunctionData("draft", [
         account,
         amount,
       ]),
+      value: 0,
       operation: 0,
     };
   }
+
   async draft(account: `0x${string}`, amount: bigint): Promise<string> {
     try {
       let tx: ethers.ContractTransactionResponse;
       if (this.roleKey) {
         tx = await this.execWithRole(
-         [{
-            to:await this.contract.getAddress(),
-            data: this.contract.interface.encodeFunctionData("draft", [
-              account,
-              amount,
-            ]),
-            value: 0,
-            operation: 0,
-          }],
+          [await this.buildDraft(account, amount)],
           this.roleKey,
         );
       } else {
@@ -162,23 +148,33 @@ export class BillingContract {
     }
   }
 
-  async fine(account: `0x${string}`, amount: bigint): Promise<string> {
+  async buildFine(
+    account: `0x${string}`,
+    amount: bigint,
+    feeRecipient: `0x${string}`,
+  ): Promise<MetaTransaction> {
+    return {
+      to: await this.contract.getAddress(),
+      data: this.contract.interface.encodeFunctionData("fine", [
+        account,
+        amount,
+        feeRecipient,
+      ]),
+      value: 0,
+      operation: 0,
+    };
+  }
+
+  async fine(
+    account: `0x${string}`,
+    amount: bigint,
+    feeRecipient: `0x${string}`,
+  ): Promise<string> {
     try {
       let tx: ethers.ContractTransactionResponse;
-      // Fee Recipient is MEVBlockerFeeTill Contract.
-      const feeRecipient = await this.contract.getAddress();
       if (this.roleKey) {
         tx = await this.execWithRole(
-          [{
-            to:  await this.contract.getAddress(),
-            data: this.contract.interface.encodeFunctionData("fine", [
-              account,
-              amount,
-              feeRecipient,
-            ]),
-            value: 0,
-            operation: 0,
-          }],
+          [await this.buildFine(account, amount, feeRecipient)],
           this.roleKey,
         );
       } else {
@@ -196,10 +192,16 @@ export class BillingContract {
     metaTransactions: MetaTransaction[],
     roleKey: string,
   ): Promise<ethers.ContractTransactionResponse> {
-    if(metaTransactions.length === 0) throw new Error("No transactions to execute")
-    const metaTx = metaTransactions.length === 1 ? metaTransactions[0] : encodeMulti(metaTransactions)
+    if (metaTransactions.length === 0)
+      throw new Error("No transactions to execute");
+    
+    // Combine transactions into one.
+    const metaTx =
+      metaTransactions.length === 1
+        ? metaTransactions[0]
+        : encodeMulti(metaTransactions);
     return this.roleContract.execTransactionWithRole(
-      metaTx.to, 
+      metaTx.to,
       metaTx.value,
       metaTx.data,
       metaTx.operation,
