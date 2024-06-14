@@ -1,6 +1,7 @@
 import { ethers, formatEther } from "ethers";
 import { BillingData, LatestBillingStatus, PaymentStatus } from "./types";
 import { BILLING_CONTRACT_ABI, ROLE_MODIFIER_ABI } from "./abis";
+import { MetaTransaction, encodeMulti } from "./multisend";
 
 interface BillingInput {
   addresses: `0x${string}`[];
@@ -12,6 +13,7 @@ export class BillingContract {
   readonly contract: ethers.Contract;
   readonly roleContract: ethers.Contract;
   private roleKey?: string;
+  fineRecipient: ethers.AddressLike;
   fineAmount: bigint;
 
   constructor(
@@ -26,6 +28,7 @@ export class BillingContract {
       ROLE_MODIFIER_ABI,
       signer,
     );
+    this.fineRecipient = signer.address;
     this.roleKey = roleKey;
     if (!roleKey) {
       console.warn(
@@ -69,7 +72,7 @@ export class BillingContract {
 
   async processPaymentStatuses(
     paymentStatuses: LatestBillingStatus[],
-  ): Promise<string[]> {
+  ): Promise<string> {
     const unpaidRecords = paymentStatuses.filter((record) => {
       const { account, status, paidAmount, billedAmount } = record;
       if (status == PaymentStatus.UNPAID) {
@@ -85,23 +88,41 @@ export class BillingContract {
       }
       return false;
     });
-    // These drafts must be processed sequentially
-    // Otherwise the owner account nonce will not be incremented.
-    const resultHashes = [];
+    let txBatch: MetaTransaction[] = [];
     for (const rec of unpaidRecords) {
-      console.log(`Executing draft for ${rec.account}...`);
-      const draftHash = await this.draft(
-        rec.account,
-        rec.billedAmount - rec.paidAmount,
+      console.log(`Attaching Draft and Fine for ${rec.account}...`);
+      txBatch.push(
+        await this.buildDraft(rec.account, rec.billedAmount - rec.paidAmount),
       );
-      resultHashes.push(draftHash);
       if (this.fineAmount > 0) {
-        console.log(`Executing fine for ${rec.account}...`);
-        const fineHash = await this.fine(rec.account, this.fineAmount);
-        resultHashes.push(fineHash);
+        txBatch.push(
+          await this.buildFine(
+            rec.account,
+            this.fineAmount,
+            this.fineRecipient,
+          ),
+        );
       }
     }
-    return resultHashes;
+    console.log(txBatch);
+    const tx = await this.execWithRole(txBatch, this.roleKey!);
+    await tx.wait();
+    return tx.hash;
+  }
+
+  async buildDraft(
+    account: `0x${string}`,
+    amount: bigint,
+  ): Promise<MetaTransaction> {
+    return {
+      to: await this.contract.getAddress(),
+      data: this.contract.interface.encodeFunctionData("draft", [
+        account,
+        amount,
+      ]),
+      value: 0,
+      operation: 0,
+    };
   }
 
   async draft(account: `0x${string}`, amount: bigint): Promise<string> {
@@ -109,10 +130,7 @@ export class BillingContract {
       let tx: ethers.ContractTransactionResponse;
       if (this.roleKey) {
         tx = await this.execWithRole(
-          this.contract.interface.encodeFunctionData("draft", [
-            account,
-            amount,
-          ]),
+          [await this.buildDraft(account, amount)],
           this.roleKey,
         );
       } else {
@@ -126,18 +144,33 @@ export class BillingContract {
     }
   }
 
-  async fine(account: `0x${string}`, amount: bigint): Promise<string> {
+  async buildFine(
+    account: ethers.AddressLike,
+    amount: bigint,
+    feeRecipient: ethers.AddressLike,
+  ): Promise<MetaTransaction> {
+    return {
+      to: await this.contract.getAddress(),
+      data: this.contract.interface.encodeFunctionData("fine", [
+        account,
+        amount,
+        feeRecipient,
+      ]),
+      value: 0,
+      operation: 0,
+    };
+  }
+
+  async fine(
+    account: `0x${string}`,
+    amount: bigint,
+    feeRecipient: `0x${string}`,
+  ): Promise<string> {
     try {
       let tx: ethers.ContractTransactionResponse;
-      // Fee Recipient is MEVBlockerFeeTill Contract.
-      const feeRecipient = await this.contract.getAddress();
       if (this.roleKey) {
         tx = await this.execWithRole(
-          this.contract.interface.encodeFunctionData("fine", [
-            account,
-            amount,
-            feeRecipient,
-          ]),
+          [await this.buildFine(account, amount, feeRecipient)],
           this.roleKey,
         );
       } else {
@@ -152,14 +185,22 @@ export class BillingContract {
   }
 
   async execWithRole(
-    data: string,
+    metaTransactions: MetaTransaction[],
     roleKey: string,
   ): Promise<ethers.ContractTransactionResponse> {
+    if (metaTransactions.length === 0)
+      throw new Error("No transactions to execute");
+
+    // Combine transactions into one.
+    const metaTx =
+      metaTransactions.length === 1
+        ? metaTransactions[0]
+        : encodeMulti(metaTransactions);
     return this.roleContract.execTransactionWithRole(
-      this.contract.getAddress(), // to
-      0, // value
-      data,
-      0, // operation
+      metaTx.to,
+      metaTx.value,
+      metaTx.data,
+      metaTx.operation,
       roleKey,
       true, // shouldRevert
     );

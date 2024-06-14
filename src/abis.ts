@@ -7,3 +7,5 @@ export const BILLING_CONTRACT_ABI = [
 export const ROLE_MODIFIER_ABI = [
   "function execTransactionWithRole(address to, uint256 value, bytes data, uint8 operation, bytes32 roleKey, bool shouldRevert) returns (bool success)",
 ];
+
+export const MULTI_SEND_ABI = ["function multiSend(bytes memory transactions)"];
