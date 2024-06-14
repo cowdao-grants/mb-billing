@@ -40,19 +40,16 @@ describe("e2e - Sepolia", () => {
   it("Runs the drafting flow with mainnet data on Sepolia billing contract", async () => {
     const paymentStatus = await dataFetcher.getPaymentStatus();
     const billingContract = BillingContract.fromEnv();
-    const draftingHashes =
+    const draftHash =
       await billingContract.processPaymentStatuses(paymentStatus);
     // This is a non-deterministic test.
-    console.log("Drafting Hashes");
-    expect(draftingHashes.length).toEqual(2);
+    console.log("Drafting Hashes", draftHash);
 
     const provider = billingContract.contract.runner!.provider;
-    console.log("TXHASH", draftingHashes);
-    // draftingHashes.map(async (hash) => {
-    //   const receipt = await provider!.getTransactionReceipt(hash);
-    //   const logs = receipt?.logs;
-    //   expect(logs!.length).toEqual(1);
-    // });
+    const receipt = await provider!.getTransactionReceipt(draftHash);
+    // 2 drafts + 2 fines + 2 safe module transactions.
+    const expectedLogs = 1 + 2 + 2 + 1;
+    expect(receipt?.logs!.length).toEqual(expectedLogs);
   });
 
   it.skip("e2e: successfully calls bill on BillingContract (with mock billing data)", async () => {

@@ -13,6 +13,7 @@ export class BillingContract {
   readonly contract: ethers.Contract;
   readonly roleContract: ethers.Contract;
   private roleKey?: string;
+  fineRecipient: ethers.AddressLike;
   fineAmount: bigint;
 
   constructor(
@@ -27,6 +28,7 @@ export class BillingContract {
       ROLE_MODIFIER_ABI,
       signer,
     );
+    this.fineRecipient = signer.address;
     this.roleKey = roleKey;
     if (!roleKey) {
       console.warn(
@@ -86,29 +88,23 @@ export class BillingContract {
       }
       return false;
     });
-    // These drafts must be processed sequentially
-    // Otherwise the owner account nonce will not be incremented.
-    // const resultHashes = [];
     let txBatch: MetaTransaction[] = [];
     for (const rec of unpaidRecords) {
+      console.log(`Attaching Draft and Fine for ${rec.account}...`);
       txBatch.push(
         await this.buildDraft(rec.account, rec.billedAmount - rec.paidAmount),
       );
-      // console.log(`Executing draft for ${rec.account}...`);
-      // const draftHash = await this.draft(
-      //   rec.account,
-      //   rec.billedAmount - rec.paidAmount,
-      // );
-      // resultHashes.push(draftHash);
-      // if (this.fineAmount > 0) {
-      //   // Fee Recipient is MEVBlockerFeeTill Contract.
-      //   const feeRecipient = await this.contract.getAddress();
-      //   console.log(`Executing fine for ${rec.account}...`);
-      //   const fineHash = await this.fine(rec.account, this.fineAmount);
-      //   resultHashes.push(fineHash);
-      // }
+      if (this.fineAmount > 0) {
+        txBatch.push(
+          await this.buildFine(
+            rec.account,
+            this.fineAmount,
+            this.fineRecipient,
+          ),
+        );
+      }
     }
-
+    console.log(txBatch);
     const tx = await this.execWithRole(txBatch, this.roleKey!);
     await tx.wait();
     return tx.hash;
@@ -149,9 +145,9 @@ export class BillingContract {
   }
 
   async buildFine(
-    account: `0x${string}`,
+    account: ethers.AddressLike,
     amount: bigint,
-    feeRecipient: `0x${string}`,
+    feeRecipient: ethers.AddressLike,
   ): Promise<MetaTransaction> {
     return {
       to: await this.contract.getAddress(),
@@ -194,7 +190,7 @@ export class BillingContract {
   ): Promise<ethers.ContractTransactionResponse> {
     if (metaTransactions.length === 0)
       throw new Error("No transactions to execute");
-    
+
     // Combine transactions into one.
     const metaTx =
       metaTransactions.length === 1
