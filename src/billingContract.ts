@@ -109,8 +109,7 @@ export class BillingContract {
       // }
     }
 
-    let batch = encodeMulti(txBatch);
-    const tx = await this.execWithRole(batch.data, this.roleKey!);
+    const tx = await this.execWithRole(txBatch, this.roleKey!);
     // const multisend = new ethers.Contract(
     //   batch.to,
     //   MULTI_SEND_ABI,
@@ -127,22 +126,13 @@ export class BillingContract {
     amount: bigint,
   ): Promise<MetaTransaction> {
     return {
-      to: await this.roleContract.getAddress(),
+      to: await this.contract.getAddress(),
       value: 0,
-      data: this.roleContract.interface.encodeFunctionData(
-        "execTransactionWithRole",
-        [
-          await this.contract.getAddress(), // to
-          0, // value
-          this.contract.interface.encodeFunctionData("draft", [
-            account,
-            amount,
-          ]),
-          1, // operation
-          this.roleKey!,
-          true, // shouldRevert
-        ],
-      ),
+      data: this.contract.interface.encodeFunctionData("draft", [
+        account,
+        amount,
+      ]),
+      operation: 0,
     };
   }
   async draft(account: `0x${string}`, amount: bigint): Promise<string> {
@@ -150,10 +140,15 @@ export class BillingContract {
       let tx: ethers.ContractTransactionResponse;
       if (this.roleKey) {
         tx = await this.execWithRole(
-          this.contract.interface.encodeFunctionData("draft", [
-            account,
-            amount,
-          ]),
+         [{
+            to:await this.contract.getAddress(),
+            data: this.contract.interface.encodeFunctionData("draft", [
+              account,
+              amount,
+            ]),
+            value: 0,
+            operation: 0,
+          }],
           this.roleKey,
         );
       } else {
@@ -174,11 +169,16 @@ export class BillingContract {
       const feeRecipient = await this.contract.getAddress();
       if (this.roleKey) {
         tx = await this.execWithRole(
-          this.contract.interface.encodeFunctionData("fine", [
-            account,
-            amount,
-            feeRecipient,
-          ]),
+          [{
+            to:  await this.contract.getAddress(),
+            data: this.contract.interface.encodeFunctionData("fine", [
+              account,
+              amount,
+              feeRecipient,
+            ]),
+            value: 0,
+            operation: 0,
+          }],
           this.roleKey,
         );
       } else {
@@ -193,14 +193,16 @@ export class BillingContract {
   }
 
   async execWithRole(
-    data: string,
+    metaTransactions: MetaTransaction[],
     roleKey: string,
   ): Promise<ethers.ContractTransactionResponse> {
+    if(metaTransactions.length === 0) throw new Error("No transactions to execute")
+    const metaTx = metaTransactions.length === 1 ? metaTransactions[0] : encodeMulti(metaTransactions)
     return this.roleContract.execTransactionWithRole(
-      this.contract.getAddress(), // to
-      0, // value
-      data,
-      0, // operation
+      metaTx.to, 
+      metaTx.value,
+      metaTx.data,
+      metaTx.operation,
       roleKey,
       true, // shouldRevert
     );
