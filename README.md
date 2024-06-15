@@ -26,31 +26,32 @@ yarn
 cp .env.sample .env
 ```
 
-Some values are filled, but others require secrets (`DUNE_API_KEY`, `BILLER_PRIVATE_KEY` for billing and `OWNER_PRIVATE_KEY` for drafting).
+Some values are filled, but others require secrets (`DUNE_API_KEY`, `BILLER_PRIVATE_KEY` for billing and `ROLE_KEY` for drafting).
 
 Run the Script:
 
 ```sh
 # Billing: Requires `BILLER_PRIVATE_KEY`
 yarn main billing
-# Drafting: Requires `OWNER_PRIVATE_KEY`
+# Drafting: Requires `BILLER_PRIVATE_KEY` & `ROLE_KEY`
 yarn main drafting
 ```
 
 ## Docker
 
-**Local build and run**
+**Build**
 
 ```sh
 docker build -t mb-billing .
-docker run --rm --env-file .env mb-billing $PROGRAM
 ```
-
 where `PROGRAM` is one of {billing, drafting}.
 
-**Published image**
+**Run**
 
 ```sh
-export PROGRAM={billing, drafting}
+# Local:
+docker run --rm --env-file .env mb-billing $PROGRAM
+# Published Image:
 docker run --rm --env-file .env ghcr.io/cowanator/mb-billing:main $PROGRAM
 ```
+where `PROGRAM` is one of {billing, drafting}.
