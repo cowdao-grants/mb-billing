@@ -2,6 +2,7 @@ import { ethers, formatEther } from "ethers";
 import { BillingData, LatestBillingStatus, PaymentStatus } from "./types";
 import { BILLING_CONTRACT_ABI, ROLE_MODIFIER_ABI } from "./abis";
 import { MetaTransaction, encodeMulti } from "./multisend";
+import { getTxCostForGas, maxBigInt, minBigInt } from "./gas";
 
 interface BillingInput {
   addresses: `0x${string}`[];
@@ -10,18 +11,21 @@ interface BillingInput {
 }
 
 export class BillingContract {
+  readonly provider: ethers.JsonRpcProvider;
   readonly contract: ethers.Contract;
   readonly roleContract: ethers.Contract;
   private roleKey?: string;
   fineRecipient: ethers.AddressLike;
-  fineAmount: bigint;
+  minFine: bigint;
 
   constructor(
     address: string,
+    provider: ethers.JsonRpcProvider,
     signer: ethers.Wallet,
     fineAmount: bigint,
     roleKey?: string,
   ) {
+    this.provider = provider;
     this.contract = new ethers.Contract(address, BILLING_CONTRACT_ABI, signer);
     this.roleContract = new ethers.Contract(
       "0xa2f93c12E697ABC34770CFAB2def5532043E26e9",
@@ -35,7 +39,7 @@ export class BillingContract {
         `No ROLE_KEY provided, executing transactions as ${signer.address}`,
       );
     }
-    this.fineAmount = fineAmount;
+    this.minFine = fineAmount;
   }
 
   static fromEnv(): BillingContract {
@@ -44,15 +48,16 @@ export class BillingContract {
       BILLER_PRIVATE_KEY,
       BILLING_CONTRACT_ADDRESS,
       ROLE_KEY,
-      FINE_FEE,
+      FINE_MIN,
     } = process.env;
     const provider = new ethers.JsonRpcProvider(RPC_URL!);
     const signer = new ethers.Wallet(BILLER_PRIVATE_KEY!, provider);
-    const fineAmount = FINE_FEE ? BigInt(FINE_FEE) : 0n;
+    const minFine = FINE_MIN ? ethers.parseEther(FINE_MIN) : 0n;
     return new BillingContract(
       BILLING_CONTRACT_ADDRESS!,
+      provider,
       signer,
-      fineAmount,
+      minFine,
       ROLE_KEY,
     );
   }
@@ -72,7 +77,7 @@ export class BillingContract {
 
   async processPaymentStatuses(
     paymentStatuses: LatestBillingStatus[],
-  ): Promise<string> {
+  ): Promise<string | undefined> {
     const unpaidRecords = paymentStatuses.filter((record) => {
       const { account, status, paidAmount, billedAmount } = record;
       if (status == PaymentStatus.UNPAID) {
@@ -88,26 +93,52 @@ export class BillingContract {
       }
       return false;
     });
-    let txBatch: MetaTransaction[] = [];
-    for (const rec of unpaidRecords) {
-      console.log(`Attaching Draft and Fine for ${rec.account}...`);
-      txBatch.push(
-        await this.buildDraft(rec.account, rec.billedAmount - rec.paidAmount),
-      );
-      if (this.fineAmount > 0) {
-        txBatch.push(
-          await this.buildFine(
-            rec.account,
-            this.fineAmount,
-            this.fineRecipient,
-          ),
+    let drafts: MetaTransaction[] = [];
+    let fines: MetaTransaction[] = [];
+    if (unpaidRecords.length > 0) {
+      for (const rec of unpaidRecords) {
+        console.log(`Attaching Draft for ${rec.account}...`);
+        drafts.push(
+          await this.buildDraft(rec.account, rec.billedAmount - rec.paidAmount),
         );
       }
+      const fineAmount = await this.evaluateFine(drafts);
+      for (const rec of unpaidRecords) {
+        console.log(`Attaching Fine for ${rec.account}...`);
+        fines.push(
+          await this.buildFine(rec.account, fineAmount, this.fineRecipient),
+        );
+      }
+      console.log(`Executing ${drafts.length} drafts & fines`);
+      const tx = await this.execWithRole([...drafts, ...fines], this.roleKey!);
+      await tx.wait();
+      return tx.hash;
+    } else {
+      console.log("No Drafts to execute!");
     }
-    console.log(txBatch);
-    const tx = await this.execWithRole(txBatch, this.roleKey!);
-    await tx.wait();
-    return tx.hash;
+    return;
+  }
+
+  async evaluateFine(drafts: MetaTransaction[]): Promise<bigint> {
+    const metaTx = drafts.length > 1 ? encodeMulti(drafts) : drafts[0];
+    const gasEstimate =
+      await this.roleContract.execTransactionWithRole.estimateGas(
+        metaTx.to,
+        metaTx.value,
+        metaTx.data,
+        metaTx.operation,
+        this.roleKey,
+        true, // shouldRevert
+      );
+    const txCost = await getTxCostForGas(this.provider, gasEstimate);
+    // Larger of minFine and estimated txCost per account (2x because of Draft + Fine)
+    // So if the fine tx is more expensive than minFine we charge that.
+    const fineAmount = maxBigInt(
+      (txCost * 2n) / BigInt(drafts.length),
+      this.minFine,
+    );
+    console.log("Fine Amount:", fineAmount);
+    return fineAmount;
   }
 
   async buildDraft(

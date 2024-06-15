@@ -43,10 +43,9 @@ describe("e2e - Sepolia", () => {
     const draftHash =
       await billingContract.processPaymentStatuses(paymentStatus);
     // This is a non-deterministic test.
-    console.log("Drafting Hashes", draftHash);
-
+    console.log("Drafting Hashe", draftHash);
     const provider = billingContract.contract.runner!.provider;
-    const receipt = await provider!.getTransactionReceipt(draftHash);
+    const receipt = await provider!.getTransactionReceipt(draftHash!);
     // 2 drafts + 2 fines + 2 safe module transactions.
     const expectedLogs = 1 + 2 + 2 + 1;
     expect(receipt?.logs!.length).toEqual(expectedLogs);
