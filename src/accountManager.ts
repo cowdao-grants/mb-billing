@@ -1,17 +1,23 @@
 import { QueryRunner } from "./dune";
 import { BillingContract } from "./billingContract";
 import { Slack } from "./notify";
+import { ethers } from "ethers";
+import { DraftResults } from "./types";
+
+const TEN_ETH = ethers.parseEther("1");
 
 export class AccountManager {
   private dataFetcher: QueryRunner;
   private billingContract: BillingContract;
   private slack: Slack;
   scanUrl?: string;
+  bondThreshold: bigint;
 
   constructor(
     dataFetcher: QueryRunner,
     billingContract: BillingContract,
     slack: Slack,
+    bondThreshold: bigint = TEN_ETH,
     scanUrl?: string,
   ) {
     this.dataFetcher = dataFetcher;
@@ -21,13 +27,20 @@ export class AccountManager {
       console.warn("running without scan URL, txHashes will be logged bare");
     }
     this.scanUrl = scanUrl;
+    this.bondThreshold = bondThreshold;
   }
 
   static async fromEnv(): Promise<AccountManager> {
+    const { BOND_THRESHOLD, SCAN_URL } = process.env;
+    const bondThreshold = BOND_THRESHOLD
+      ? ethers.parseEther(BOND_THRESHOLD)
+      : TEN_ETH;
     return new AccountManager(
       QueryRunner.fromEnv(),
       BillingContract.fromEnv(),
       await Slack.fromEnv(),
+      bondThreshold,
+      SCAN_URL,
     );
   }
 
@@ -35,7 +48,6 @@ export class AccountManager {
     const today = todaysDate();
     console.log("Running Biller for Date", today);
     const billingResults = await this.dataFetcher.getBillingData(today);
-    // TODO - validate results!
     const txHash =
       await this.billingContract.updatePaymentDetails(billingResults);
     await this.slack.post(
@@ -46,17 +58,34 @@ export class AccountManager {
   async runDrafting() {
     console.log("Running Drafter");
     const paymentStatuses = await this.dataFetcher.getPaymentStatus();
-    const txHash =
+    const draftResults =
       await this.billingContract.processPaymentStatuses(paymentStatuses);
-    if (txHash) {
-      await this.slack.post(
-        `MEV Drafting ran successfully: ${this.txLink(txHash)}`,
-      );
+    if (draftResults) {
+      await this.draftPost(draftResults);
     } else {
       console.log("No accounts drafted");
     }
-    // TODO - check balances after drafting and notify if too low!
-    // May only need to query balances of those who were drafted.
+  }
+
+  async draftPost(draftResults: DraftResults): Promise<void> {
+    const { txHash, accounts } = draftResults;
+    let messages: string[] = [
+      `MEV Drafting ran successfully: ${this.txLink(txHash)}`,
+    ];
+
+    for (const address of accounts) {
+      try {
+        const remainingBond = await this.billingContract.getBond(address);
+        if (remainingBond < this.bondThreshold) {
+          messages.push(
+            `Account ${address} bond (${ethers.formatEther(remainingBond)} ETH) below threshold!`,
+          );
+        }
+      } catch (error) {
+        messages.push(`Error reading bond value for ${address}: ${error}`);
+      }
+    }
+    await this.slack.post(messages.join("\n"));
   }
 
   private txLink(hash: string): string {

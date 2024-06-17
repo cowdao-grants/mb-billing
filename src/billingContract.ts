@@ -1,5 +1,10 @@
 import { ethers, formatEther } from "ethers";
-import { BillingData, LatestBillingStatus, PaymentStatus } from "./types";
+import {
+  BillingData,
+  DraftResults,
+  LatestBillingStatus,
+  PaymentStatus,
+} from "./types";
 import { BILLING_CONTRACT_ABI, ROLE_MODIFIER_ABI } from "./abis";
 import { getTxCostForGas, maxBigInt } from "./gas";
 import { MetaTransaction, encodeMulti } from "ethers-multisend";
@@ -53,6 +58,7 @@ export class BillingContract {
     const provider = new ethers.JsonRpcProvider(RPC_URL!);
     const signer = new ethers.Wallet(BILLER_PRIVATE_KEY!, provider);
     const minFine = FINE_MIN ? ethers.parseEther(FINE_MIN) : 0n;
+
     return new BillingContract(
       BILLING_CONTRACT_ADDRESS!,
       provider,
@@ -77,7 +83,7 @@ export class BillingContract {
 
   async processPaymentStatuses(
     paymentStatuses: LatestBillingStatus[],
-  ): Promise<string | undefined> {
+  ): Promise<DraftResults | undefined> {
     const unpaidRecords = paymentStatuses.filter((record) => {
       const { account, status, paidAmount, billedAmount } = record;
       if (status == PaymentStatus.UNPAID) {
@@ -93,6 +99,7 @@ export class BillingContract {
       }
       return false;
     });
+    let draftedAccounts: `0x${string}`[] = [];
     let drafts: MetaTransaction[] = [];
     let fines: MetaTransaction[] = [];
     if (unpaidRecords.length > 0) {
@@ -101,6 +108,7 @@ export class BillingContract {
         drafts.push(
           await this.buildDraft(rec.account, rec.billedAmount - rec.paidAmount),
         );
+        draftedAccounts.push(rec.account);
       }
       const fineAmount = await this.evaluateFine(drafts);
       for (const rec of unpaidRecords) {
@@ -112,11 +120,18 @@ export class BillingContract {
       console.log(`Executing ${drafts.length} drafts & fines`);
       const tx = await this.execWithRole([...drafts, ...fines], this.roleKey!);
       await tx.wait();
-      return tx.hash;
+      return {
+        txHash: tx.hash as `0x${string}`,
+        accounts: draftedAccounts,
+      };
     } else {
       console.log("No Drafts to execute!");
     }
     return;
+  }
+
+  async getBond(account: `0x${string}`): Promise<bigint> {
+    return this.contract.bonds(account);
   }
 
   async evaluateFine(drafts: MetaTransaction[]): Promise<bigint> {

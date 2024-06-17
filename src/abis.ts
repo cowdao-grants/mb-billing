@@ -1,4 +1,5 @@
 export const BILLING_CONTRACT_ABI = [
+  "function bonds(address) view returns (uint256)",
   "function bill(address[] ids, uint256[] due, uint256 newPrice)",
   "function draft(address id, uint256 amt)",
   "function fine(address id, uint256 amt, address to)",
