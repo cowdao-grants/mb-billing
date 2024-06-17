@@ -34,3 +34,8 @@ export interface LatestBillingStatus {
   paidAmount: bigint;
   status: PaymentStatus;
 }
+
+export interface DraftResults {
+  txHash: `0x${string}`;
+  accounts: `0x${string}`[];
+}
