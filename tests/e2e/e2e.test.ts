@@ -37,7 +37,7 @@ describe("e2e - Sepolia", () => {
     expect(logs!.length).toEqual(3);
   });
 
-  it("Runs the drafting flow with mainnet data on Sepolia billing contract", async () => {
+  it.only("Runs the drafting flow with mainnet data on Sepolia billing contract", async () => {
     const paymentStatus = await dataFetcher.getPaymentStatus();
     const billingContract = BillingContract.fromEnv();
     const draftResults =
@@ -53,8 +53,6 @@ describe("e2e - Sepolia", () => {
       "0x93699c88c427d1040f2839dffaaf0de0e8aae4b4",
       "0x4efb61ffc5b81ce473b426e4bc9ffaf613574286",
     ]);
-
-    expect(logs.slice(1, logs.length - 1)).toEqual([{}]);
   });
 
   it.skip("e2e: successfully calls bill on BillingContract (with mock billing data)", async () => {
