@@ -21,7 +21,7 @@ export async function getTxCostForGas(
   return gasEstimate * effectiveGasPrice;
 }
 
-export function minBigInt(a: bigint, b: bigint): bigint {
+function minBigInt(a: bigint, b: bigint): bigint {
   if (a < b) {
     return a;
   }

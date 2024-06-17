@@ -3,7 +3,6 @@ import log from "loglevel";
 import { AccountManager } from "./accountManager";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import { Slack } from "./notify";
 
 log.setLevel("info");
 dotenv.config();
