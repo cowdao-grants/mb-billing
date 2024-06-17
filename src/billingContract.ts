@@ -2,7 +2,7 @@ import { ethers, formatEther } from "ethers";
 import { BillingData, LatestBillingStatus, PaymentStatus } from "./types";
 import { BILLING_CONTRACT_ABI, ROLE_MODIFIER_ABI } from "./abis";
 import { MetaTransaction, encodeMulti } from "./multisend";
-import { getTxCostForGas, maxBigInt, minBigInt } from "./gas";
+import { getTxCostForGas, maxBigInt } from "./gas";
 
 interface BillingInput {
   addresses: `0x${string}`[];

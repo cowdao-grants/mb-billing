@@ -9,9 +9,7 @@ export enum OperationType {
   Call = 0,
   DelegateCall = 1,
 }
-/**
- *
- */
+
 export interface MetaTransaction {
   /// A `uint8` with `0` for a `call` or `1` for a `delegatecall` (=> 1 byte),
   readonly operation?: OperationType;
