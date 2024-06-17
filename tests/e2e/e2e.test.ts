@@ -42,8 +42,7 @@ describe("e2e - Sepolia", () => {
     const billingContract = BillingContract.fromEnv();
     const draftHash =
       await billingContract.processPaymentStatuses(paymentStatus);
-    // This is a non-deterministic test.
-    console.log("Drafting Hashe", draftHash);
+
     const provider = billingContract.contract.runner!.provider;
     const receipt = await provider!.getTransactionReceipt(draftHash!);
     // 2 drafts + 2 fines + 2 safe module transactions.
