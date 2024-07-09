@@ -140,7 +140,7 @@ where `PROGRAM` is one of {billing, drafting}.
 # Local:
 docker run --rm --env-file .env mb-billing $PROGRAM
 # Published Image:
-docker run --rm --env-file .env ghcr.io/cowanator/mb-billing:main $PROGRAM
+docker run --rm --env-file .env ghcr.io/cowdao-grants/mb-billing:main $PROGRAM
 ```
 
 where `PROGRAM` is one of {billing, drafting}.
