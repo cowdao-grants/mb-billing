@@ -23,28 +23,23 @@ export class QueryRunner {
   private readonly paymentQuery: number;
   private readonly feeQuery: number;
   private readonly options: RuntimeOptions;
-  // This should be formatted as comma separated list of tuples of SQL hex string
-  // E.g. ('0x12', '0x34'),('0x56', '0x78')
-  private readonly bondMap: string;
 
   constructor(
     apiKey: string,
     billingQuery: number,
     paymentQuery: number,
     feeQuery: number,
-    bondMap: string,
     options?: RuntimeOptions,
   ) {
     this.dune = new DuneClient(apiKey);
     this.billingQuery = billingQuery;
     this.paymentQuery = paymentQuery;
     this.feeQuery = feeQuery;
-    this.bondMap = bondMap;
     this.options = options || {};
   }
 
   static fromEnv(): QueryRunner {
-    const { FEE_QUERY, BILLING_QUERY, PAYMENT_QUERY, DUNE_API_KEY, BOND_MAP } =
+    const { FEE_QUERY, BILLING_QUERY, PAYMENT_QUERY, DUNE_API_KEY } =
       process.env;
     // TODO - make this configurable.
     const options = {
@@ -58,7 +53,6 @@ export class QueryRunner {
       parseInt(BILLING_QUERY!),
       parseInt(PAYMENT_QUERY!),
       parseInt(FEE_QUERY!),
-      BOND_MAP!,
       options,
     );
   }
@@ -121,7 +115,6 @@ export class QueryRunner {
     try {
       console.log(`Retrieving latest payment status...`);
       const paymentResponse = await this.dune.runQuery({
-        query_parameters: [QueryParameter.text("BondMapping", this.bondMap)],
         queryId: this.paymentQuery,
         ...this.options,
       });
