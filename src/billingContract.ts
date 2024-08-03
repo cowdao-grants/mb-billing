@@ -18,8 +18,10 @@ interface BillingInput {
 export class BillingContract {
   readonly provider: ethers.JsonRpcProvider;
   readonly contract: ethers.Contract;
-  readonly roleContract: ethers.Contract;
-  private roleKey?: string;
+  readonly roleData: {
+    contract: ethers.Contract;
+    key: string;
+  };
   fineRecipient: ethers.AddressLike;
   minFine: bigint;
 
@@ -28,22 +30,22 @@ export class BillingContract {
     provider: ethers.JsonRpcProvider,
     signer: ethers.Wallet,
     fineAmount: bigint,
-    roleKey?: string,
+    roleData: {
+      roleAddress: string;
+      roleKey: string;
+    },
   ) {
     this.provider = provider;
     this.contract = new ethers.Contract(address, BILLING_CONTRACT_ABI, signer);
-    this.roleContract = new ethers.Contract(
-      "0xa2f93c12E697ABC34770CFAB2def5532043E26e9",
-      ROLE_MODIFIER_ABI,
-      signer,
-    );
     this.fineRecipient = signer.address;
-    this.roleKey = roleKey;
-    if (!roleKey) {
-      console.warn(
-        `No ROLE_KEY provided, executing transactions as ${signer.address}`,
-      );
-    }
+    this.roleData = {
+      contract: new ethers.Contract(
+        roleData.roleAddress,
+        ROLE_MODIFIER_ABI,
+        signer,
+      ),
+      key: roleData.roleKey,
+    };
     this.minFine = fineAmount;
   }
 
@@ -52,19 +54,30 @@ export class BillingContract {
       RPC_URL,
       BILLER_PRIVATE_KEY,
       BILLING_CONTRACT_ADDRESS,
+      ROLE_CONTRACT_ADDRESS,
       ROLE_KEY,
       FINE_MIN,
     } = process.env;
     const provider = new ethers.JsonRpcProvider(RPC_URL!);
     const signer = new ethers.Wallet(BILLER_PRIVATE_KEY!, provider);
     const minFine = FINE_MIN ? ethers.parseEther(FINE_MIN) : 0n;
-
+    if (!BILLING_CONTRACT_ADDRESS) {
+      throw new Error("Missing env var BILLING_CONTRACT_ADDRESS");
+    }
+    if (!(ROLE_KEY && ROLE_CONTRACT_ADDRESS)) {
+      throw new Error(
+        "Missing Role Data ROLE_KEY and/or ROLE_CONTRACT_ADDRESS",
+      );
+    }
     return new BillingContract(
-      BILLING_CONTRACT_ADDRESS!,
+      BILLING_CONTRACT_ADDRESS,
       provider,
       signer,
       minFine,
-      ROLE_KEY,
+      {
+        roleAddress: ROLE_CONTRACT_ADDRESS,
+        roleKey: ROLE_KEY,
+      },
     );
   }
 
@@ -118,7 +131,7 @@ export class BillingContract {
         );
       }
       console.log(`Executing ${drafts.length} drafts & fines`);
-      const tx = await this.execWithRole([...drafts, ...fines], this.roleKey!);
+      const tx = await this.execWithRole([...drafts, ...fines]);
       await tx.wait();
       return {
         txHash: tx.hash as `0x${string}`,
@@ -137,14 +150,15 @@ export class BillingContract {
   async evaluateFine(drafts: MetaTransaction[]): Promise<bigint> {
     const metaTx = drafts.length > 1 ? encodeMulti(drafts) : drafts[0];
     const gasEstimate =
-      await this.roleContract.execTransactionWithRole.estimateGas(
+      await this.roleData.contract.execTransactionWithRole.estimateGas(
         metaTx.to,
         metaTx.value,
         metaTx.data,
         metaTx.operation,
-        this.roleKey,
+        this.roleData.key,
         true, // shouldRevert
       );
+
     const txCost = await getTxCostForGas(this.provider, gasEstimate);
     // Larger of minFine and estimated txCost per account (2x because of Draft + Fine)
     // So if the fine tx is more expensive than minFine we charge that.
@@ -173,15 +187,9 @@ export class BillingContract {
 
   async draft(account: `0x${string}`, amount: bigint): Promise<string> {
     try {
-      let tx: ethers.ContractTransactionResponse;
-      if (this.roleKey) {
-        tx = await this.execWithRole(
-          [await this.buildDraft(account, amount)],
-          this.roleKey,
-        );
-      } else {
-        tx = await this.contract.draft(account, amount);
-      }
+      let tx = await this.execWithRole([
+        await this.buildDraft(account, amount),
+      ]);
       await tx.wait();
       return tx.hash;
     } catch (error) {
@@ -213,15 +221,9 @@ export class BillingContract {
     feeRecipient: `0x${string}`,
   ): Promise<string> {
     try {
-      let tx: ethers.ContractTransactionResponse;
-      if (this.roleKey) {
-        tx = await this.execWithRole(
-          [await this.buildFine(account, amount, feeRecipient)],
-          this.roleKey,
-        );
-      } else {
-        tx = await this.contract.fine(account, amount, feeRecipient);
-      }
+      const tx = await this.execWithRole([
+        await this.buildFine(account, amount, feeRecipient),
+      ]);
       await tx.wait();
       return tx.hash;
     } catch (error) {
@@ -232,22 +234,20 @@ export class BillingContract {
 
   async execWithRole(
     metaTransactions: MetaTransaction[],
-    roleKey: string,
   ): Promise<ethers.ContractTransactionResponse> {
     if (metaTransactions.length === 0)
       throw new Error("No transactions to execute");
-
     // Combine transactions into one.
     const metaTx =
       metaTransactions.length === 1
         ? metaTransactions[0]
         : encodeMulti(metaTransactions);
-    return this.roleContract.execTransactionWithRole(
+    return this.roleData.contract.execTransactionWithRole(
       metaTx.to,
       metaTx.value,
       metaTx.data,
       metaTx.operation,
-      roleKey,
+      this.roleData.key,
       true, // shouldRevert
     );
   }
