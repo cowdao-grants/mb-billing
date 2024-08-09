@@ -72,8 +72,6 @@ PAYMENT_QUERY=3742749
 FINE_MIN=0.001
 # Minimum account balance required to stay connected to the network. (in ETH)
 BOND_THRESHOLD=10
-# For accounts who are loosely linked to the bond provider account.
-BOND_MAP="('0xa489faf6e337d997b8a23e2b6f3a8880b1b61e19', '0xfd39bc23d356a762cf80f60b7bc8d2a4b9bcfe67')"
 ```
 
 Notes on:
