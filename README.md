@@ -66,8 +66,8 @@ Assuming the roles are appropriately confugured this program requires the follow
 ```sh
 # A 32-byte hex string associated to the configured zodiac roles.
 ZODIAC_ROLE_KEY
-# Query for detecting unpaid bills.
-PAYMENT_QUERY
+# Dune Query ID for detecting unpaid bills.
+PAYMENT_QUERY=3742749
 # Minimum fine to charge for drafting (in ETH)
 FINE_MIN=0.001
 # Minimum account balance required to stay connected to the network. (in ETH)
