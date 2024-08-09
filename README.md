@@ -65,7 +65,7 @@ Assuming the roles are appropriately confugured this program requires the follow
 
 ```sh
 # A 32-byte hex string associated to the configured zodiac roles.
-ROLE_KEY
+ZODIAC_ROLE_KEY
 # Dune Query ID for detecting unpaid bills.
 PAYMENT_QUERY=3742749
 # Minimum fine to charge for drafting (in ETH)
@@ -113,14 +113,14 @@ yarn
 cp .env.sample .env
 ```
 
-Some values are filled, but others require secrets (`DUNE_API_KEY`, `BILLER_PRIVATE_KEY` for billing and `ROLE_KEY` for drafting).
+Some values are filled, but others require secrets (`DUNE_API_KEY`, `BILLER_PRIVATE_KEY` for billing and `ZODIAC_ROLE_KEY` for drafting).
 
 Run the Script:
 
 ```sh
 # Billing: Requires `BILLER_PRIVATE_KEY`
 yarn main billing
-# Drafting: Requires `BILLER_PRIVATE_KEY` & `ROLE_KEY`
+# Drafting: Requires `BILLER_PRIVATE_KEY` & `ZODIAC_ROLE_KEY`
 yarn main drafting
 ```
 
