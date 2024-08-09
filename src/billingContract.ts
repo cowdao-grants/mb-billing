@@ -54,8 +54,8 @@ export class BillingContract {
       RPC_URL,
       BILLER_PRIVATE_KEY,
       BILLING_CONTRACT_ADDRESS,
-      ROLE_CONTRACT_ADDRESS,
-      ROLE_KEY,
+      ZODIAC_ROLES_MOD,
+      ZODIAC_ROLE_KEY,
       FINE_MIN,
     } = process.env;
     const provider = new ethers.JsonRpcProvider(RPC_URL!);
@@ -64,9 +64,9 @@ export class BillingContract {
     if (!BILLING_CONTRACT_ADDRESS) {
       throw new Error("Missing env var BILLING_CONTRACT_ADDRESS");
     }
-    if (!(ROLE_KEY && ROLE_CONTRACT_ADDRESS)) {
+    if (!(ZODIAC_ROLE_KEY && ZODIAC_ROLES_MOD)) {
       throw new Error(
-        "Missing Role Data ROLE_KEY and/or ROLE_CONTRACT_ADDRESS",
+        "Missing Role Data ZODIAC_ROLE_KEY and/or ZODIAC_ROLES_MOD",
       );
     }
     return new BillingContract(
@@ -75,8 +75,8 @@ export class BillingContract {
       signer,
       minFine,
       {
-        roleAddress: ROLE_CONTRACT_ADDRESS,
-        roleKey: ROLE_KEY,
+        roleAddress: ZODIAC_ROLES_MOD,
+        roleKey: ZODIAC_ROLE_KEY,
       },
     );
   }
