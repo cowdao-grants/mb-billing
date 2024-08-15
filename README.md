@@ -51,9 +51,9 @@ Can be executed by anyone listed as a "biller" on the MEVBlockerFeeTill contract
 Requires two additional environment variables:
 
 ```sh
-# Dune QueryId of Payments Due
-BILLING_QUERY=3605385
-# Dune QueryId of fee value.
+# Dune QueryId of Payments Due every week
+BILLING_QUERY=3630322
+# Dune QueryId for computing the monthly fee value.
 FEE_QUERY=3605385
 ```
 
