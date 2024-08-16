@@ -3,6 +3,10 @@ import { BillingContract } from "./billingContract";
 import { Slack } from "./notify";
 import { ethers } from "ethers";
 import { DraftResults, LatestBillingStatus, PaymentStatus } from "./types";
+<<<<<<< HEAD
+=======
+import { stat } from "fs";
+>>>>>>> 2cf22fd (Make draft execution optional)
 
 const TEN_ETH = ethers.parseEther("1");
 
@@ -68,6 +72,7 @@ export class AccountManager {
     }
   }
 
+<<<<<<< HEAD
   async paymentStatusPost(
     paymentStatuses: LatestBillingStatus[],
   ): Promise<void> {
@@ -81,6 +86,17 @@ export class AccountManager {
     }
     if (messages.length == 1) {
       messages.push("All builders paid");
+=======
+  async paymentStatusPost(paymentStatuses: LatestBillingStatus[]): Promise<void> {
+    let messages = ["MEVBlocker builder payment status update:"];
+    for (let paymentStatus of paymentStatuses) {
+      if (paymentStatus.status !== PaymentStatus.PAID) {
+        messages.push(`${paymentStatus.account} was supposed to pay ${paymentStatus.billedAmount} but paid ${paymentStatus.paidAmount}`);
+      }
+    }
+    if (messages.length == 1) {
+      messages.push("All builders paid")
+>>>>>>> 2cf22fd (Make draft execution optional)
     }
     await this.slack.post(messages.join("\n"));
   }
