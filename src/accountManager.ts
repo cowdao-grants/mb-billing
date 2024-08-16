@@ -50,9 +50,16 @@ export class AccountManager {
     const billingResults = await this.dataFetcher.getBillingData(today);
     const txHash =
       await this.billingContract.updatePaymentDetails(billingResults);
-    await this.slack.post(
-      `MEV Billing ran successfully: ${this.txLink(txHash)}`,
-    );
+
+    let messages = [`MEV Billing ran successfully: ${this.txLink(txHash)}`];
+    for (const amountDue of billingResults.dueAmounts) {
+      messages.push(
+        `${amountDue.builder} was billed ${ethers.formatEther(
+          amountDue.dueAmountWei,
+        )} ETH`,
+      );
+    }
+    await this.slack.post(messages.join("\n"));
   }
 
   async runDrafting() {
