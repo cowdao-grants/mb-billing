@@ -18,7 +18,7 @@ interface BillingInput {
 export class BillingContract {
   readonly provider: ethers.JsonRpcProvider;
   readonly contract: ethers.Contract;
-  readonly roleData: {
+  readonly roleData?: {
     contract: ethers.Contract;
     key: string;
   };
@@ -30,7 +30,7 @@ export class BillingContract {
     provider: ethers.JsonRpcProvider,
     signer: ethers.Wallet,
     fineAmount: bigint,
-    roleData: {
+    roleData?: {
       roleAddress: string;
       roleKey: string;
     },
@@ -38,14 +38,16 @@ export class BillingContract {
     this.provider = provider;
     this.contract = new ethers.Contract(address, BILLING_CONTRACT_ABI, signer);
     this.fineRecipient = signer.address;
-    this.roleData = {
-      contract: new ethers.Contract(
-        roleData.roleAddress,
-        ROLE_MODIFIER_ABI,
-        signer,
-      ),
-      key: roleData.roleKey,
-    };
+    if (roleData) {
+      this.roleData = {
+        contract: new ethers.Contract(
+          roleData.roleAddress,
+          ROLE_MODIFIER_ABI,
+          signer,
+        ),
+        key: roleData.roleKey,
+      };
+    }
     this.minFine = fineAmount;
   }
 
@@ -64,20 +66,19 @@ export class BillingContract {
     if (!BILLING_CONTRACT_ADDRESS) {
       throw new Error("Missing env var BILLING_CONTRACT_ADDRESS");
     }
-    if (!(ZODIAC_ROLE_KEY && ZODIAC_ROLES_MOD)) {
-      throw new Error(
-        "Missing Role Data ZODIAC_ROLE_KEY and/or ZODIAC_ROLES_MOD",
-      );
+    let roleData
+    if ((ZODIAC_ROLE_KEY && ZODIAC_ROLES_MOD)) {
+      roleData = {
+        roleAddress: ZODIAC_ROLES_MOD,
+        roleKey: ZODIAC_ROLE_KEY,
+      };
     }
     return new BillingContract(
       BILLING_CONTRACT_ADDRESS,
       provider,
       signer,
       minFine,
-      {
-        roleAddress: ZODIAC_ROLES_MOD,
-        roleKey: ZODIAC_ROLE_KEY,
-      },
+      roleData,
     );
   }
 
@@ -115,7 +116,7 @@ export class BillingContract {
     let draftedAccounts: `0x${string}`[] = [];
     let drafts: MetaTransaction[] = [];
     let fines: MetaTransaction[] = [];
-    if (unpaidRecords.length > 0) {
+    if (unpaidRecords.length > 0 && this.roleData) {
       for (const rec of unpaidRecords) {
         console.log(`Attaching Draft for ${rec.account}...`);
         drafts.push(
@@ -137,6 +138,8 @@ export class BillingContract {
         txHash: tx.hash as `0x${string}`,
         accounts: draftedAccounts,
       };
+    } else if (!this.roleData) {
+      console.log("Not executing drafts because no role configured");
     } else {
       console.log("No Drafts to execute!");
     }
@@ -148,6 +151,10 @@ export class BillingContract {
   }
 
   async evaluateFine(drafts: MetaTransaction[]): Promise<bigint> {
+    if (!this.roleData) {
+      throw new Error("Cannot estimate gas penalty for `fine` without configured role module");
+    }
+
     const metaTx = drafts.length > 1 ? encodeMulti(drafts) : drafts[0];
     const gasEstimate =
       await this.roleData.contract.execTransactionWithRole.estimateGas(
@@ -235,8 +242,13 @@ export class BillingContract {
   async execWithRole(
     metaTransactions: MetaTransaction[],
   ): Promise<ethers.ContractTransactionResponse> {
-    if (metaTransactions.length === 0)
+    if (metaTransactions.length === 0) {
       throw new Error("No transactions to execute");
+    }
+    if (!this.roleData) {
+      throw new Error("Cannot execute transaction without configured role module");
+    }
+
     // Combine transactions into one.
     const metaTx =
       metaTransactions.length === 1

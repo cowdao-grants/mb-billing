@@ -2,7 +2,8 @@ import { QueryRunner } from "./dune";
 import { BillingContract } from "./billingContract";
 import { Slack } from "./notify";
 import { ethers } from "ethers";
-import { DraftResults } from "./types";
+import { DraftResults, LatestBillingStatus, PaymentStatus } from "./types";
+import { stat } from "fs";
 
 const TEN_ETH = ethers.parseEther("1");
 
@@ -58,6 +59,7 @@ export class AccountManager {
   async runDrafting() {
     console.log("Running Drafter");
     const paymentStatuses = await this.dataFetcher.getPaymentStatus();
+    await this.paymentStatusPost(paymentStatuses);
     const draftResults =
       await this.billingContract.processPaymentStatuses(paymentStatuses);
     if (draftResults) {
@@ -65,6 +67,19 @@ export class AccountManager {
     } else {
       console.log("No accounts drafted");
     }
+  }
+
+  async paymentStatusPost(paymentStatuses: LatestBillingStatus[]): Promise<void> {
+    let messages = ["MEVBlocker builder payment status update:"];
+    for (let paymentStatus of paymentStatuses) {
+      if (paymentStatus.status !== PaymentStatus.PAID) {
+        messages.push(`${paymentStatus.account} was supposed to pay ${paymentStatus.billedAmount} but paid ${paymentStatus.paidAmount}`);
+      }
+    }
+    if (messages.length == 1) {
+      messages.push("All builders paid")
+    }
+    await this.slack.post(messages.join("\n"));
   }
 
   async draftPost(draftResults: DraftResults): Promise<void> {
