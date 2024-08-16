@@ -3,7 +3,6 @@ import { BillingContract } from "./billingContract";
 import { Slack } from "./notify";
 import { ethers } from "ethers";
 import { DraftResults, LatestBillingStatus, PaymentStatus } from "./types";
-import { stat } from "fs";
 
 const TEN_ETH = ethers.parseEther("1");
 
@@ -19,7 +18,7 @@ export class AccountManager {
     billingContract: BillingContract,
     slack: Slack,
     bondThreshold: bigint = TEN_ETH,
-    scanUrl?: string,
+    scanUrl?: string
   ) {
     this.dataFetcher = dataFetcher;
     this.billingContract = billingContract;
@@ -41,7 +40,7 @@ export class AccountManager {
       BillingContract.fromEnv(),
       await Slack.fromEnv(),
       bondThreshold,
-      SCAN_URL,
+      SCAN_URL
     );
   }
 
@@ -52,7 +51,7 @@ export class AccountManager {
     const txHash =
       await this.billingContract.updatePaymentDetails(billingResults);
     await this.slack.post(
-      `MEV Billing ran successfully: ${this.txLink(txHash)}`,
+      `MEV Billing ran successfully: ${this.txLink(txHash)}`
     );
   }
 
@@ -69,15 +68,19 @@ export class AccountManager {
     }
   }
 
-  async paymentStatusPost(paymentStatuses: LatestBillingStatus[]): Promise<void> {
+  async paymentStatusPost(
+    paymentStatuses: LatestBillingStatus[]
+  ): Promise<void> {
     let messages = ["MEVBlocker builder payment status update:"];
     for (let paymentStatus of paymentStatuses) {
       if (paymentStatus.status !== PaymentStatus.PAID) {
-        messages.push(`${paymentStatus.account} was supposed to pay ${paymentStatus.billedAmount} but paid ${paymentStatus.paidAmount}`);
+        messages.push(
+          `${paymentStatus.account} was supposed to pay ${paymentStatus.billedAmount} but paid ${paymentStatus.paidAmount}`
+        );
       }
     }
     if (messages.length == 1) {
-      messages.push("All builders paid")
+      messages.push("All builders paid");
     }
     await this.slack.post(messages.join("\n"));
   }
@@ -93,7 +96,7 @@ export class AccountManager {
         const remainingBond = await this.billingContract.getBond(address);
         if (remainingBond < this.bondThreshold) {
           messages.push(
-            `Account ${address} bond (${ethers.formatEther(remainingBond)} ETH) below threshold!`,
+            `Account ${address} bond (${ethers.formatEther(remainingBond)} ETH) below threshold!`
           );
         }
       } catch (error) {
