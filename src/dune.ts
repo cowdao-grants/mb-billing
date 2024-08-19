@@ -29,7 +29,7 @@ export class QueryRunner {
     billingQuery: number,
     paymentQuery: number,
     feeQuery: number,
-    options?: RuntimeOptions
+    options?: RuntimeOptions,
   ) {
     this.dune = new DuneClient(apiKey);
     this.billingQuery = billingQuery;
@@ -53,7 +53,7 @@ export class QueryRunner {
       parseInt(BILLING_QUERY!),
       parseInt(PAYMENT_QUERY!),
       parseInt(FEE_QUERY!),
-      options
+      options,
     );
   }
 
