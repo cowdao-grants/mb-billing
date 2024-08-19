@@ -1,5 +1,6 @@
 export interface AmountDue {
   billingAddress: `0x${string}`;
+  builder?: string;
   dueAmountWei: bigint;
 }
 

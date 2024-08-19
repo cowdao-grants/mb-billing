@@ -68,6 +68,7 @@ export class QueryRunner {
       console.log("Got Billing Results:", results);
       return results.map((row: any) => ({
         billingAddress: row.miner_biller_address!,
+        builder: row.miner_label,
         dueAmountWei: BigInt(row.amount_due_wei!),
       }));
     } catch (error) {
