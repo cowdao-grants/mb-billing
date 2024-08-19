@@ -18,7 +18,7 @@ export class AccountManager {
     billingContract: BillingContract,
     slack: Slack,
     bondThreshold: bigint = TEN_ETH,
-    scanUrl?: string
+    scanUrl?: string,
   ) {
     this.dataFetcher = dataFetcher;
     this.billingContract = billingContract;
@@ -40,7 +40,7 @@ export class AccountManager {
       BillingContract.fromEnv(),
       await Slack.fromEnv(),
       bondThreshold,
-      SCAN_URL
+      SCAN_URL,
     );
   }
 
@@ -51,7 +51,7 @@ export class AccountManager {
     const txHash =
       await this.billingContract.updatePaymentDetails(billingResults);
     await this.slack.post(
-      `MEV Billing ran successfully: ${this.txLink(txHash)}`
+      `MEV Billing ran successfully: ${this.txLink(txHash)}`,
     );
   }
 
@@ -69,13 +69,13 @@ export class AccountManager {
   }
 
   async paymentStatusPost(
-    paymentStatuses: LatestBillingStatus[]
+    paymentStatuses: LatestBillingStatus[],
   ): Promise<void> {
     let messages = ["MEVBlocker builder payment status update:"];
     for (let paymentStatus of paymentStatuses) {
       if (paymentStatus.status !== PaymentStatus.PAID) {
         messages.push(
-          `${paymentStatus.account} was supposed to pay ${paymentStatus.billedAmount} but paid ${paymentStatus.paidAmount}`
+          `${paymentStatus.account} was supposed to pay ${paymentStatus.billedAmount} but paid ${paymentStatus.paidAmount}`,
         );
       }
     }
@@ -96,7 +96,7 @@ export class AccountManager {
         const remainingBond = await this.billingContract.getBond(address);
         if (remainingBond < this.bondThreshold) {
           messages.push(
-            `Account ${address} bond (${ethers.formatEther(remainingBond)} ETH) below threshold!`
+            `Account ${address} bond (${ethers.formatEther(remainingBond)} ETH) below threshold!`,
           );
         }
       } catch (error) {

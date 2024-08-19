@@ -66,8 +66,8 @@ export class BillingContract {
     if (!BILLING_CONTRACT_ADDRESS) {
       throw new Error("Missing env var BILLING_CONTRACT_ADDRESS");
     }
-    let roleData
-    if ((ZODIAC_ROLE_KEY && ZODIAC_ROLES_MOD)) {
+    let roleData;
+    if (ZODIAC_ROLE_KEY && ZODIAC_ROLES_MOD) {
       roleData = {
         roleAddress: ZODIAC_ROLES_MOD,
         roleKey: ZODIAC_ROLE_KEY,
@@ -152,7 +152,9 @@ export class BillingContract {
 
   async evaluateFine(drafts: MetaTransaction[]): Promise<bigint> {
     if (!this.roleData) {
-      throw new Error("Cannot estimate gas penalty for `fine` without configured role module");
+      throw new Error(
+        "Cannot estimate gas penalty for `fine` without configured role module",
+      );
     }
 
     const metaTx = drafts.length > 1 ? encodeMulti(drafts) : drafts[0];
@@ -246,7 +248,9 @@ export class BillingContract {
       throw new Error("No transactions to execute");
     }
     if (!this.roleData) {
-      throw new Error("Cannot execute transaction without configured role module");
+      throw new Error(
+        "Cannot execute transaction without configured role module",
+      );
     }
 
     // Combine transactions into one.
