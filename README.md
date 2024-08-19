@@ -118,7 +118,7 @@ Run the Script:
 ```sh
 # Billing: Requires `BILLER_PRIVATE_KEY`
 yarn main billing
-# Drafting: Requires `BILLER_PRIVATE_KEY` & `ZODIAC_ROLE_KEY`
+# Drafting: If no module is configured will simply post draft status
 yarn main drafting
 ```
 
