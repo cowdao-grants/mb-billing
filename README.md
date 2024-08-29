@@ -52,9 +52,9 @@ Requires two additional environment variables:
 
 ```sh
 # Dune QueryId of Payments Due every week
-BILLING_QUERY=3630322
+BILLING_QUERY=4005800
 # Dune QueryId for computing the monthly fee value.
-FEE_QUERY=3605385
+FEE_QUERY=4002039
 ```
 
 ### Drafting
@@ -67,7 +67,7 @@ Assuming the roles are appropriately confugured this program requires the follow
 # A 32-byte hex string associated to the configured zodiac roles.
 ZODIAC_ROLE_KEY
 # Dune Query ID for detecting unpaid bills.
-PAYMENT_QUERY=3742749
+PAYMENT_QUERY=4016152
 # Minimum fine to charge for drafting (in ETH)
 FINE_MIN=0.001
 # Minimum account balance required to stay connected to the network. (in ETH)

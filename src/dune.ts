@@ -57,18 +57,26 @@ export class QueryRunner {
     );
   }
 
-  private async getAmountsDue(date: string): Promise<AmountDue[]> {
+  private async getAmountsDue(
+    billingDate: string,
+    feeComputationStart: string,
+    feeComputationEnd: string,
+  ): Promise<AmountDue[]> {
     try {
       const billingResponse = await this.dune.runQuery({
-        query_parameters: [QueryParameter.date("bill_date", date)],
+        query_parameters: [
+          QueryParameter.date("billing_date", billingDate),
+          QueryParameter.date("fee_computation_start", feeComputationStart),
+          QueryParameter.date("fee_computation_end", feeComputationEnd),
+        ],
         queryId: this.billingQuery,
         ...this.options,
       });
       const results = billingResponse.result!.rows;
       console.log("Got Billing Results:", results);
       return results.map((row: any) => ({
-        billingAddress: row.miner_biller_address!,
-        builder: row.miner_label,
+        billingAddress: row.billing_address!,
+        builder: row.label,
         dueAmountWei: BigInt(row.amount_due_wei!),
       }));
     } catch (error) {
@@ -77,10 +85,13 @@ export class QueryRunner {
     }
   }
 
-  private async getPeriodFee(date: string): Promise<bigint> {
+  private async getPeriodFee(start: string, end: string): Promise<bigint> {
     try {
       const feeResponse = await this.dune.runQuery({
-        query_parameters: [QueryParameter.date("bill_date", date)],
+        query_parameters: [
+          QueryParameter.date("start", start),
+          QueryParameter.date("end", end),
+        ],
         queryId: this.feeQuery,
         ...this.options,
       });
@@ -99,11 +110,18 @@ export class QueryRunner {
 
   async getBillingData(date: Date): Promise<BillingData> {
     try {
-      const dateString = moment(date).format("YYYY-MM-DD HH:mm:ss");
+      const billingDate = moment(date).format("YYYY-MM-DD 00:00:00");
+      const feeComputationStart = moment(date)
+        .subtract(1, "month")
+        .startOf("month")
+        .format("YYYY-MM-DD 00:00:00");
+      const feeComputationEnd = moment(date)
+        .startOf("month")
+        .format("YYYY-MM-DD 00:00:00");
       console.log(`Executing fee and payment queries this may take a while...`);
       const [dueAmounts, periodFee] = await Promise.all([
-        this.getAmountsDue(dateString),
-        this.getPeriodFee(dateString),
+        this.getAmountsDue(billingDate, feeComputationStart, feeComputationEnd),
+        this.getPeriodFee(feeComputationStart, feeComputationEnd),
       ]);
       return { dueAmounts, periodFee };
     } catch (error) {
