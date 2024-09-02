@@ -82,7 +82,7 @@ export class AccountManager {
     for (let paymentStatus of paymentStatuses) {
       if (paymentStatus.status !== PaymentStatus.PAID) {
         messages.push(
-          `${paymentStatus.account} was supposed to pay ${paymentStatus.billedAmount} but paid ${paymentStatus.paidAmount}`,
+          `${paymentStatus.account} was supposed to pay ${ethers.formatEther(paymentStatus.billedAmount)} ETH but paid ${ethers.formatEther(paymentStatus.paidAmount)} ETH`,
         );
       }
     }
