@@ -111,6 +111,18 @@ export class QueryRunner {
   async getBillingData(date: Date): Promise<BillingData> {
     try {
       const billingDate = moment(date).format("YYYY-MM-DD 00:00:00");
+      // The fee for the current period is the per block fee of the starting date (computed over the previous month)
+      const billingFeeComputationStart = moment(date)
+        .subtract(7, "day")
+        .subtract(1, "month")
+        .startOf("month")
+        .format("YYYY-MM-DD 00:00:00");
+      const billingFeeComputationEnd = moment(date)
+        .subtract(7, "day")
+        .startOf("month")
+        .format("YYYY-MM-DD 00:00:00");
+
+      // The fee for the next period is the fee of the previous month
       const feeComputationStart = moment(date)
         .subtract(1, "month")
         .startOf("month")
@@ -120,7 +132,11 @@ export class QueryRunner {
         .format("YYYY-MM-DD 00:00:00");
       console.log(`Executing fee and payment queries this may take a while...`);
       const [dueAmounts, periodFee] = await Promise.all([
-        this.getAmountsDue(billingDate, feeComputationStart, feeComputationEnd),
+        this.getAmountsDue(
+          billingDate,
+          billingFeeComputationStart,
+          billingFeeComputationEnd,
+        ),
         this.getPeriodFee(feeComputationStart, feeComputationEnd),
       ]);
       return { dueAmounts, periodFee };
