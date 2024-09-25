@@ -8,9 +8,7 @@ The data supplied to the billing method is aggregated by the following:
 
 ### [Dune](https://dune.com) Queries:
 
-- **Fee per block:** https://dune.com/queries/3605385
-- **Payment Due:** https://dune.com/queries/3630322
-- **Payment Status:** https://dune.com/queries/3742749
+Cf. https://github.com/cowprotocol/dune-queries/tree/main/mevblocker/fees
 
 ## Verified Contracts
 
