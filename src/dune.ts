@@ -63,17 +63,23 @@ export class QueryRunner {
     feeComputationEnd: string,
   ): Promise<AmountDue[]> {
     try {
+      const queryParams = [
+        QueryParameter.date("billing_date", billingDate),
+        QueryParameter.date("fee_computation_start", feeComputationStart),
+        QueryParameter.date("fee_computation_end", feeComputationEnd),
+      ];
+      console.log(`Executing billing query ${this.billingQuery} with parameters:`, 
+        queryParams.map(p => `${p.name}=${p.value}`).join(', '));
+      
       const billingResponse = await this.dune.runQuery({
-        query_parameters: [
-          QueryParameter.date("billing_date", billingDate),
-          QueryParameter.date("fee_computation_start", feeComputationStart),
-          QueryParameter.date("fee_computation_end", feeComputationEnd),
-        ],
+        query_parameters: queryParams,
         queryId: this.billingQuery,
         ...this.options,
       });
+      
+      console.log(`Billing query ${this.billingQuery} execution ID:`, billingResponse.execution_id);
       const results = billingResponse.result!.rows;
-      console.log("Got Billing Results:", results);
+      console.log(`Billing query ${this.billingQuery} returned ${results.length} records`);
       return results.map((row: any) => ({
         billingAddress: row.billing_address!,
         builder: row.label,
@@ -87,19 +93,25 @@ export class QueryRunner {
 
   private async getPeriodFee(start: string, end: string): Promise<bigint> {
     try {
+      const queryParams = [
+        QueryParameter.date("start", start),
+        QueryParameter.date("end", end),
+      ];
+      console.log(`Executing fee query ${this.feeQuery} with parameters:`, 
+        queryParams.map(p => `${p.name}=${p.value}`).join(', '));
+      
       const feeResponse = await this.dune.runQuery({
-        query_parameters: [
-          QueryParameter.date("start", start),
-          QueryParameter.date("end", end),
-        ],
+        query_parameters: queryParams,
         queryId: this.feeQuery,
         ...this.options,
       });
+      
+      console.log(`Fee query ${this.feeQuery} execution ID:`, feeResponse.execution_id);
       const results = feeResponse.result!.rows;
       if (results.length > 1) {
         throw new Error(`Unexpected number of records ${results.length} != 1`);
       }
-      console.log("Period Fee Results:", results);
+      console.log(`Fee query ${this.feeQuery} returned ${results.length} records`);
       const result = results[0].avg_block_fee_wei as string;
       return BigInt(result);
     } catch (error) {
@@ -148,13 +160,15 @@ export class QueryRunner {
 
   async getPaymentStatus(): Promise<LatestBillingStatus[]> {
     try {
-      console.log(`Retrieving latest payment status...`);
+      console.log(`Executing payment query ${this.paymentQuery} (no parameters)`);
       const paymentResponse = await this.dune.runQuery({
         queryId: this.paymentQuery,
         ...this.options,
       });
+      
+      console.log(`Payment query ${this.paymentQuery} execution ID:`, paymentResponse.execution_id);
       const results = paymentResponse.result!.rows;
-      console.log("Got Payment Status Results:", results);
+      console.log(`Payment query ${this.paymentQuery} returned ${results.length} records`);
       return results.map((row: any) => ({
         account: row.usr!,
         billedAmount: BigInt(row.bill_amount!),
