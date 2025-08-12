@@ -68,8 +68,10 @@ export class QueryRunner {
         QueryParameter.date("fee_computation_start", feeComputationStart),
         QueryParameter.date("fee_computation_end", feeComputationEnd),
       ];
-      console.log(`Executing billing query ${this.billingQuery} with parameters:`,
-        queryParams.map(p => `${p.name}=${p.value}`).join(', '));
+      console.log(
+        `Executing billing query ${this.billingQuery} with parameters:`,
+        queryParams.map((p) => `${p.name}=${p.value}`).join(", "),
+      );
 
       const billingResponse = await this.dune.runQuery({
         query_parameters: queryParams,
@@ -77,7 +79,10 @@ export class QueryRunner {
         ...this.options,
       });
 
-      console.log(`Billing query ${this.billingQuery} execution ID:`, billingResponse.execution_id);
+      console.log(
+        `Billing query ${this.billingQuery} execution ID:`,
+        billingResponse.execution_id,
+      );
       const results = billingResponse.result!.rows;
       console.log("Got Billing Results:", results);
       return results.map((row: any) => ({
@@ -97,8 +102,10 @@ export class QueryRunner {
         QueryParameter.date("start", start),
         QueryParameter.date("end", end),
       ];
-      console.log(`Executing fee query ${this.feeQuery} with parameters:`,
-        queryParams.map(p => `${p.name}=${p.value}`).join(', '));
+      console.log(
+        `Executing fee query ${this.feeQuery} with parameters:`,
+        queryParams.map((p) => `${p.name}=${p.value}`).join(", "),
+      );
 
       const feeResponse = await this.dune.runQuery({
         query_parameters: queryParams,
@@ -106,7 +113,10 @@ export class QueryRunner {
         ...this.options,
       });
 
-      console.log(`Fee query ${this.feeQuery} execution ID:`, feeResponse.execution_id);
+      console.log(
+        `Fee query ${this.feeQuery} execution ID:`,
+        feeResponse.execution_id,
+      );
       const results = feeResponse.result!.rows;
       if (results.length > 1) {
         throw new Error(`Unexpected number of records ${results.length} != 1`);
@@ -160,13 +170,18 @@ export class QueryRunner {
 
   async getPaymentStatus(): Promise<LatestBillingStatus[]> {
     try {
-      console.log(`Executing payment query ${this.paymentQuery} (no parameters)`);
+      console.log(
+        `Executing payment query ${this.paymentQuery} (no parameters)`,
+      );
       const paymentResponse = await this.dune.runQuery({
         queryId: this.paymentQuery,
         ...this.options,
       });
 
-      console.log(`Payment query ${this.paymentQuery} execution ID:`, paymentResponse.execution_id);
+      console.log(
+        `Payment query ${this.paymentQuery} execution ID:`,
+        paymentResponse.execution_id,
+      );
       const results = paymentResponse.result!.rows;
       console.log("Got Payment Status Results:", results);
       return results.map((row: any) => ({
